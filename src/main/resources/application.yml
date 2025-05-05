@@ -5,14 +5,9 @@ spring:
       password: admin
       roles: ADMIN
   datasource:
-    url: jdbc:postgresql://${DB_HOST:db}:${DB_PORT:5432}/${DB_NAME:inventory_db}
-    username: ${DB_USER:postgres}
-    password: ${DB_PASSWORD:aqua909020}
     hikari:
       pool-name: InventoryManagementHikariPool
   jpa:
-    hibernate:
-      ddl-auto: ${DDL_AUTO:update}
     show-sql: true
 
 jwt:
