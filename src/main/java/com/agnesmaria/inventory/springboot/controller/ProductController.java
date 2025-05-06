@@ -4,6 +4,7 @@ package com.agnesmaria.inventory.springboot.controller;
 import com.agnesmaria.inventory.springboot.dto.ProductRequest;
 import com.agnesmaria.inventory.springboot.model.Product;
 import com.agnesmaria.inventory.springboot.service.ProductService;
+import com.agnesmaria.inventory.springboot.service.InventoryService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +17,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ProductController {
     private final ProductService productService;
-
+    private final InventoryService inventoryService;
+    
     @GetMapping
     public List<Product> getAllProducts() {
         return productService.getAllProducts();
@@ -58,5 +60,10 @@ public class ProductController {
     @DeleteMapping("/{sku}")
     public void deleteProduct(@PathVariable String sku) {
         productService.deleteProduct(sku);
+    }
+
+    @GetMapping("/{sku}/stock")
+    public int getTotalStock(@PathVariable String sku) {
+        return inventoryService.getTotalStockByProduct(sku);
     }
 }
