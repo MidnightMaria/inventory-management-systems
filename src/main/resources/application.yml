@@ -1,19 +1,19 @@
 spring:
-  security:
-    user:
-      name: admin
-      password: admin
-      roles: ADMIN
   datasource:
     hikari:
       pool-name: InventoryManagementHikariPool
   jpa:
+    hibernate:
+      ddl-auto: update
     show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
 
 jwt:
-  secretKey: inventory-secret-key
+  secretKey: PHDTDumRh+WBCB5cyzK1NmYFwEZpFgDUMomR6C7NeqM=
   issuer: www.agnesmaria.com
-  expirationMinute: 60
+  expiration: 86400000
 
 swagger:
   contact-name: Agnes Maria

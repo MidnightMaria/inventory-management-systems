@@ -3,7 +3,6 @@ package com.agnesmaria.inventory.springboot.model;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -29,6 +28,10 @@ public class Product {
     
     @Column(name = "min_stock")
     private int minStock;
+    
+    // Tambahkan field quantity
+    @Column(name = "quantity")
+    private int quantity;
     
     @Column(name = "dynamic_pricing")
     private boolean dynamicPricing;
