@@ -9,8 +9,8 @@ import com.agnesmaria.inventory.springboot.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -24,20 +24,20 @@ public class AuthService {
 
     public AuthResponse login(AuthRequest request) {
         authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.getEmail(),
-                        request.getPassword()
-                )
+            new UsernamePasswordAuthenticationToken(
+                request.getEmail(),
+                request.getPassword()
+            )
         );
 
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+            .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
         String jwtToken = jwtService.generateToken(user);
 
         return AuthResponse.builder()
-                .token(jwtToken)
-                .build();
+            .token(jwtToken)
+            .build();
     }
 
     public AuthResponse register(RegisterRequest request) {
@@ -46,20 +46,19 @@ public class AuthService {
         }
 
         User newUser = User.builder()
-                .firstname(request.getFirstname())
-                .lastname(request.getLastname())
-                .email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword()))
-                .role(Role.USER) // You can set a default role here
-                .build();
+            .firstname(request.getFirstname())
+            .lastname(request.getLastname())
+            .email(request.getEmail())
+            .password(passwordEncoder.encode(request.getPassword()))
+            .role(Role.USER)
+            .build();
 
         userRepository.save(newUser);
 
-        // Optionally, you can generate a token immediately after registration
         String jwtToken = jwtService.generateToken(newUser);
 
         return AuthResponse.builder()
-                .token(jwtToken)
-                .build();
+            .token(jwtToken)
+            .build();
     }
 }

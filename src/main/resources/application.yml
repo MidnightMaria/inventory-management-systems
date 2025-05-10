@@ -1,5 +1,8 @@
 spring:
   datasource:
+    url: jdbc:postgresql://localhost:5432/inventory_db
+    username: postgres
+    password: yourpassword
     hikari:
       pool-name: InventoryManagementHikariPool
   jpa:
@@ -11,10 +14,15 @@ spring:
         format_sql: true
 
 jwt:
-  secretKey: PHDTDumRh+WBCB5cyzK1NmYFwEZpFgDUMomR6C7NeqM=
+  secret-key: PHDTDumRh+WBCB5cyzK1NmYFwEZpFgDUMomR6C7NeqM=
   issuer: www.agnesmaria.com
   expiration: 86400000
 
+logging:
+  level:
+    org.springframework.security: DEBUG
+    com.agnesmaria.inventory: DEBUG
+    
 swagger:
   contact-name: Agnes Maria
   contact-mail: agnesmarmarie@gmail.com
