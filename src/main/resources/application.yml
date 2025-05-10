@@ -24,8 +24,11 @@ logging:
     com.agnesmaria.inventory: DEBUG
     
 swagger:
-  contact-name: Agnes Maria
-  contact-mail: agnesmarmarie@gmail.com
-  contact-url: https://github.com/MidnightMaria
   app-name: Inventory Management System
-  app-description: "Inventory management system with product tracking, warehouse management, and reporting features"
+  app-description: "Inventory management system with JWT authentication"
+  app-version: 1.0.0
+  app-license: MIT
+  app-license-url: https://opensource.org/licenses/MIT
+  contact-name: Agnes Maria
+  contact-url: https://github.com/MidnightMaria
+  contact-mail: agnesmarmarie@gmail.com
