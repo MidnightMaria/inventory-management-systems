@@ -24,6 +24,9 @@ public class User implements UserDetails {
     private Integer id;
     private String firstname;
     private String lastname;
+    @Column(unique = true)
+    private String username; // Tambahkan field username
+    @Column(unique = true)
     private String email;
     private String password;
 
@@ -37,6 +40,10 @@ public class User implements UserDetails {
 
     @Override
     public String getUsername() {
+        return username; // Mengembalikan username
+    }
+
+    public String getEmail() { // Tambahkan getter untuk email
         return email;
     }
 

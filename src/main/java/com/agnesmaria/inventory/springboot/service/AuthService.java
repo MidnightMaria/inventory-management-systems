@@ -25,13 +25,13 @@ public class AuthService {
     public AuthResponse login(AuthRequest request) {
         authenticationManager.authenticate(
             new UsernamePasswordAuthenticationToken(
-                request.getEmail(),
+                request.getUsername(), // <--- GUNAKAN USERNAME DARI REQUEST
                 request.getPassword()
             )
         );
 
-        User user = userRepository.findByEmail(request.getEmail())
-            .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        User user = userRepository.findByUsername(request.getUsername()) // <--- CARI BERDASARKAN USERNAME
+            .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + request.getUsername()));
 
         String jwtToken = jwtService.generateToken(user);
 
@@ -44,19 +44,20 @@ public class AuthService {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new IllegalArgumentException("Email already exists");
         }
-
+    
         User newUser = User.builder()
             .firstname(request.getFirstname())
             .lastname(request.getLastname())
             .email(request.getEmail())
+            .username(request.getUsername()) // <--- PASTIKAN USERNAME DIISI (CONTOH: SAMA DENGAN EMAIL)
             .password(passwordEncoder.encode(request.getPassword()))
             .role(Role.USER)
             .build();
-
+    
         userRepository.save(newUser);
-
+    
         String jwtToken = jwtService.generateToken(newUser);
-
+    
         return AuthResponse.builder()
             .token(jwtToken)
             .build();

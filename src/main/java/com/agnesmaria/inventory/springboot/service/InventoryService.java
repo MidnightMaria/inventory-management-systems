@@ -5,7 +5,7 @@ import com.agnesmaria.inventory.springboot.dto.InventoryResponse;
 import com.agnesmaria.inventory.springboot.exception.*;
 import com.agnesmaria.inventory.springboot.model.*;
 import com.agnesmaria.inventory.springboot.repository.*;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -34,25 +34,25 @@ public class InventoryService {
 
             // Validate warehouse
             Warehouse warehouse = warehouseRepository.findById(request.getWarehouseId())
-                .orElseThrow(() -> new WarehouseNotFoundException(request.getWarehouseId()));
+                    .orElseThrow(() -> new WarehouseNotFoundException(request.getWarehouseId()));
 
             // Get current user
             String username = SecurityContextHolder.getContext().getAuthentication().getName();
-            User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UserNotFoundException(username));
+            User user = userRepository.findByUsername(username) // Cari berdasarkan username
+                    .orElseThrow(() -> new UserNotFoundException(username)); // Menggunakan konstruktor yang sesuai
 
             // Find or create inventory item
             InventoryItem item = inventoryItemRepository
-                .findByProductAndWarehouse(product, warehouse)
-                .orElseGet(() -> {
-                    log.info("Creating new inventory item for product {} in warehouse {}", 
-                            product.getSku(), warehouse.getCode());
-                    return InventoryItem.builder()
-                            .product(product)
-                            .warehouse(warehouse)
-                            .quantity(0)
-                            .build();
-                });
+                    .findByProductAndWarehouse(product, warehouse)
+                    .orElseGet(() -> {
+                        log.info("Creating new inventory item for product {} in warehouse {}",
+                                product.getSku(), warehouse.getCode());
+                        return InventoryItem.builder()
+                                .product(product)
+                                .warehouse(warehouse)
+                                .quantity(0)
+                                .build();
+                    });
 
             int oldQuantity = item.getQuantity();
             int newQuantity = request.getQuantity();
@@ -67,8 +67,8 @@ public class InventoryService {
                     request.getAdjustmentReason(),
                     request.getReferenceNumber());
 
-            log.info("Stock updated: {} in {} ({} → {}). Movement ID: {}", 
-                    product.getSku(), warehouse.getCode(), 
+            log.info("Stock updated: {} in {} ({} → {}). Movement ID: {}",
+                    product.getSku(), warehouse.getCode(),
                     oldQuantity, newQuantity, movement.getId());
 
             return buildInventoryResponse(product, warehouse, savedItem, oldQuantity);
@@ -83,8 +83,8 @@ public class InventoryService {
     }
 
     private InventoryMovement recordInventoryMovement(Product product, Warehouse warehouse, User user,
-                                                    int oldQty, int newQty, 
-                                                    String movementType, String reason, String reference) {
+                                                     int oldQty, int newQty,
+                                                     String movementType, String reason, String reference) {
         InventoryMovement movement = InventoryMovement.builder()
                 .product(product)
                 .warehouse(warehouse)
@@ -99,8 +99,8 @@ public class InventoryService {
         return inventoryMovementRepository.save(movement);
     }
 
-    private InventoryResponse buildInventoryResponse(Product product, Warehouse warehouse, 
-                                                   InventoryItem item, int oldQuantity) {
+    private InventoryResponse buildInventoryResponse(Product product, Warehouse warehouse,
+                                                     InventoryItem item, int oldQuantity) {
         return InventoryResponse.builder()
                 .productSku(product.getSku())
                 .productName(product.getName())
