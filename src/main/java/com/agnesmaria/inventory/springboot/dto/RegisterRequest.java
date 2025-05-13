@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import com.agnesmaria.inventory.springboot.model.Role; // Import enum Role
 
 @Data
 @Builder
@@ -28,6 +29,8 @@ public class RegisterRequest {
     @Size(min = 6, message = "Password must be at least 6 characters long")
     private String password;
 
-    @NotBlank(message = "Username is required") // Tambahkan validasi untuk username
-    private String username; // Tambahkan field username
+    @NotBlank(message = "Username is required")
+    private String username;
+
+    private Role role; // Tambahkan field role
 }

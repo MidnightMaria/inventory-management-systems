@@ -25,12 +25,12 @@ public class AuthService {
     public AuthResponse login(AuthRequest request) {
         authenticationManager.authenticate(
             new UsernamePasswordAuthenticationToken(
-                request.getUsername(), // <--- GUNAKAN USERNAME DARI REQUEST
+                request.getUsername(),
                 request.getPassword()
             )
         );
 
-        User user = userRepository.findByUsername(request.getUsername()) // <--- CARI BERDASARKAN USERNAME
+        User user = userRepository.findByUsername(request.getUsername())
             .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + request.getUsername()));
 
         String jwtToken = jwtService.generateToken(user);
@@ -48,14 +48,7 @@ public class AuthService {
             throw new IllegalArgumentException("Username already exists");
         }
 
-        Role userRole = Role.USER; // Default role
-
-        // Logic sementara untuk memberikan peran ADMIN atau WAREHOUSE_MANAGER berdasarkan username
-        if (request.getUsername().equalsIgnoreCase("admin")) {
-            userRole = Role.ADMIN;
-        } else if (request.getUsername().equalsIgnoreCase("warehouse")) {
-            userRole = Role.WAREHOUSE_MANAGER;
-        }
+        Role userRole = request.getRole() != null ? request.getRole() : Role.USER; // Gunakan role dari request, default USER
 
         User newUser = User.builder()
             .firstname(request.getFirstname())

@@ -26,7 +26,7 @@ public class AuthController {
     public AuthResponse login(@RequestBody AuthRequest request) {
         return authService.login(request);
     }
-     
+
     @Operation(summary = "User registration", description = "Register new user")
     @PostMapping("/register")
     public AuthResponse register(@Valid @RequestBody RegisterRequest request) {
