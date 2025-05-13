@@ -28,7 +28,7 @@ public class PurchaseOrder {
     @CreationTimestamp
     @Column(name = "order_date", updatable = false)
     private LocalDateTime orderDate;
-    
+
     @Enumerated(EnumType.STRING)
     private PurchaseOrderStatus status;
 }
