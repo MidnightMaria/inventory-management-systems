@@ -1,0 +1,34 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/inventory_db
+    username: postgres
+    password: yourpassword
+    hikari:
+      pool-name: InventoryManagementHikariPool
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+jwt:
+  secret-key: PHDTDumRh+WBCB5cyzK1NmYFwEZpFgDUMomR6C7NeqM=
+  issuer: www.agnesmaria.com
+  expiration: 86400000
+
+logging:
+  level:
+    org.springframework.security: DEBUG
+    com.agnesmaria.inventory: DEBUG
+    
+swagger:
+  app-name: Inventory Management System
+  app-description: "Inventory management system with JWT authentication"
+  app-version: 1.0.0
+  app-license: MIT
+  app-license-url: https://opensource.org/licenses/MIT
+  contact-name: Agnes Maria
+  contact-url: https://github.com/MidnightMaria
+  contact-mail: agnesmarmarie@gmail.com
