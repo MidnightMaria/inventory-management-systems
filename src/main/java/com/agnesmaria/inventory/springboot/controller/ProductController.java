@@ -1,15 +1,12 @@
 package com.agnesmaria.inventory.springboot.controller;
 
-
 import com.agnesmaria.inventory.springboot.dto.ProductRequest;
 import com.agnesmaria.inventory.springboot.model.Product;
 import com.agnesmaria.inventory.springboot.service.ProductService;
 import com.agnesmaria.inventory.springboot.service.InventoryService;
-
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -23,10 +20,10 @@ import java.util.List;
 public class ProductController {
     private final ProductService productService;
     private final InventoryService inventoryService;
-    
+
     @Operation(
-        summary = "Get all products",
-        security = @SecurityRequirement(name = "bearerAuth")
+            summary = "Get all products",
+            security = @SecurityRequirement(name = "bearerAuth")
     )
     @GetMapping
     public List<Product> getAllProducts() {
@@ -41,28 +38,30 @@ public class ProductController {
     @PostMapping
     public Product createProduct(@Valid @RequestBody ProductRequest productRequest) {
         Product product = Product.builder()
-            .sku(productRequest.getSku())
-            .name(productRequest.getName())
-            .description(productRequest.getDescription())
-            .price(productRequest.getPrice())
-            .minStock(productRequest.getMinStock())
-            .dynamicPricing(productRequest.isDynamicPricing())
-            .competitorPrice(productRequest.getCompetitorPrice())
-            .build();
+                .sku(productRequest.getSku())
+                .name(productRequest.getName())
+                .description(productRequest.getDescription())
+                .price(productRequest.getPrice())
+                .minStock(productRequest.getMinStock())
+                .quantity(productRequest.getQuantity())
+                .dynamicPricing(productRequest.isDynamicPricing())
+                .competitorPrice(productRequest.getCompetitorPrice())
+                .build();
         return productService.createProduct(product);
     }
 
     @PutMapping("/{sku}")
     public Product updateProduct(@PathVariable String sku, @Valid @RequestBody ProductRequest productRequest) {
         Product product = Product.builder()
-            .sku(sku)
-            .name(productRequest.getName())
-            .description(productRequest.getDescription())
-            .price(productRequest.getPrice())
-            .minStock(productRequest.getMinStock())
-            .dynamicPricing(productRequest.isDynamicPricing())
-            .competitorPrice(productRequest.getCompetitorPrice())
-            .build();
+                .sku(sku)
+                .name(productRequest.getName())
+                .description(productRequest.getDescription())
+                .price(productRequest.getPrice())
+                .minStock(productRequest.getMinStock())
+                .quantity(productRequest.getQuantity())
+                .dynamicPricing(productRequest.isDynamicPricing())
+                .competitorPrice(productRequest.getCompetitorPrice())
+                .build();
         return productService.updateProduct(sku, product);
     }
 

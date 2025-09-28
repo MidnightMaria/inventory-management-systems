@@ -29,16 +29,17 @@ public class Product {
     @Column(name = "min_stock")
     private int minStock;
     
-    // Tambahkan field quantity
+    // Jumlah stok tersedia
     @Column(name = "quantity")
     private int quantity;
-    
+
+    // Untuk dynamic pricing
     @Column(name = "dynamic_pricing")
     private boolean dynamicPricing;
-    
+
     @Column(name = "competitor_price")
     private BigDecimal competitorPrice;
-    
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

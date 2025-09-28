@@ -10,7 +10,6 @@ import java.util.Optional;
 public interface ProductRepository extends JpaRepository<Product, String> {
     @Query("SELECT p FROM Product p WHERE p.quantity < p.minStock")
     List<Product> findByQuantityLessThanMinStock();
-    
-    // Tambahkan method untuk mencari berdasarkan SKU
+
     Optional<Product> findBySku(String sku);
 }

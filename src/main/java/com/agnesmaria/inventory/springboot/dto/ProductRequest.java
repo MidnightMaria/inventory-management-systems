@@ -21,6 +21,9 @@ public class ProductRequest {
     @NotNull
     @Positive
     private BigDecimal price;
+
+    @Min(0)
+    private int quantity;
     
     @Min(0)
     private int minStock;
