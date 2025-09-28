@@ -74,4 +74,10 @@ public class ProductController {
     public int getTotalStock(@PathVariable String sku) {
         return inventoryService.getTotalStockByProduct(sku);
     }
+
+    @GetMapping("/{sku}/stock-level")
+    public int getStockLevel(@PathVariable String sku) {
+        return productService.getProductBySku(sku).getStock();
+    }
+
 }

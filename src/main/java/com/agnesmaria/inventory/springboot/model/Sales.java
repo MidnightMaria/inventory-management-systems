@@ -6,20 +6,23 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
+@Table(name = "sales")
 @Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class Sales {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "product_id")
+    // Relasi ke Product
+    @ManyToOne
+    @JoinColumn(name = "product_sku", referencedColumnName = "sku")
     private Product product;
 
-    private Integer quantity;
+    private int quantity;
 
     private LocalDateTime timestamp;
 }
