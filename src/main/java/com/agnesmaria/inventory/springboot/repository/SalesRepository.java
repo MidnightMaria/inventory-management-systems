@@ -1,10 +1,11 @@
 package com.agnesmaria.inventory.springboot.repository;
 
 import com.agnesmaria.inventory.springboot.model.Sales;
+import com.agnesmaria.inventory.springboot.model.Product;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 
 public interface SalesRepository extends JpaRepository<Sales, Long> {
-    List<Sales> findBySku(String sku);
+    List<Sales> findByProduct(Product product);
 }

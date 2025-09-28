@@ -1,9 +1,9 @@
 package com.agnesmaria.inventory.springboot.controller;
 
+import com.agnesmaria.inventory.springboot.dto.SalesRequest;
 import com.agnesmaria.inventory.springboot.model.Sales;
 import com.agnesmaria.inventory.springboot.service.SalesService;
-import lombok.*;
-
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,7 +18,7 @@ public class SalesController {
 
     @PostMapping
     public ResponseEntity<Sales> createSale(@RequestBody SalesRequest request) {
-        Sales sale = salesService.createSale(request.getSku(), request.getQuantity());
+        Sales sale = salesService.createSale(request);
         return ResponseEntity.ok(sale);
     }
 
@@ -30,11 +30,5 @@ public class SalesController {
     @GetMapping("/{sku}")
     public ResponseEntity<List<Sales>> getSalesBySku(@PathVariable String sku) {
         return ResponseEntity.ok(salesService.getSalesBySku(sku));
-    }
-
-    @Data
-    static class SalesRequest {
-        private String sku;
-        private int quantity;
     }
 }
