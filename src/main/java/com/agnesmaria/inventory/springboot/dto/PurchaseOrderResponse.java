@@ -17,6 +17,8 @@ public class PurchaseOrderResponse {
     private Long id;
     private Long supplierId;
     private LocalDateTime orderDate;
-    private String status; // Gunakan String untuk status, atau enum DTO jika diperlukan
+    private LocalDateTime expectedDeliveryDate;
+    private BigDecimal totalCost;
+    private String status;
     private List<OrderItemResponse> items;
 }

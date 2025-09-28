@@ -25,4 +25,7 @@ public class PurchaseOrderItem {
 
     private int quantity;
     private BigDecimal unitPrice;
+
+    @Column(name = "subtotal")
+    private BigDecimal subtotal; // quantity * unitPrice
 }

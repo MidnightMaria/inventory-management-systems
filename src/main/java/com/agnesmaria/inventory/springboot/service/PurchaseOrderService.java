@@ -25,39 +25,53 @@ public class PurchaseOrderService {
     private final ProductRepository productRepository;
 
     @Transactional
-    public PurchaseOrderResponse createPO(PurchaseOrderRequest request) { // Ubah return type
-        // Validasi supplier
-        Supplier supplier = supplierRepository.findById(request.getSupplierId())
-                .orElseThrow(() -> new RuntimeException("Supplier not found"));
+public PurchaseOrderResponse createPO(PurchaseOrderRequest request) {
+    Supplier supplier = supplierRepository.findById(request.getSupplierId())
+            .orElseThrow(() -> new RuntimeException("Supplier not found"));
 
-        // Buat PO
-        PurchaseOrder po = PurchaseOrder.builder()
-                .supplier(supplier)
-                .status(PurchaseOrderStatus.DRAFT)
-                .orderDate(LocalDateTime.now())
-                .build();
+    PurchaseOrder po = PurchaseOrder.builder()
+            .supplier(supplier)
+            .status(PurchaseOrderStatus.DRAFT)
+            .orderDate(LocalDateTime.now())
+            .build();
 
-        // Buat PO Items
-        List<PurchaseOrderItem> items = request.getItems().stream()
-                .map(item -> {
-                    Product product = productRepository.findById(item.getProductSku())
-                            .orElseThrow(() -> new RuntimeException("Product not found: " + item.getProductSku()));
+    List<PurchaseOrderItem> items = request.getItems().stream()
+            .map(item -> {
+                Product product = productRepository.findById(item.getProductSku())
+                        .orElseThrow(() -> new RuntimeException("Product not found: " + item.getProductSku()));
 
-                    return PurchaseOrderItem.builder()
-                            .purchaseOrder(po)
-                            .product(product)
-                            .quantity(item.getQuantity())
-                            .unitPrice(product.getPrice())
-                            .build();
-                })
-                .collect(Collectors.toList());
+                BigDecimal subtotal = product.getPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
 
-        po.setItems(items);
-        PurchaseOrder savedPO = purchaseOrderRepository.save(po);
+                return PurchaseOrderItem.builder()
+                        .purchaseOrder(po)
+                        .product(product)
+                        .quantity(item.getQuantity())
+                        .unitPrice(product.getPrice())
+                        .subtotal(subtotal)
+                        .build();
+            })
+            .collect(Collectors.toList());
 
-        // Konversi ke DTO sebelum return
-        return convertToPurchaseOrderResponse(savedPO);
+    po.setItems(items);
+
+    // Hitung total cost: sum(subtotal) + biaya order dari supplier
+    BigDecimal totalCost = items.stream()
+            .map(PurchaseOrderItem::getSubtotal)
+            .reduce(BigDecimal.ZERO, BigDecimal::add)
+            .add(BigDecimal.valueOf(supplier.getOrderCost() != null ? supplier.getOrderCost() : 0.0));
+
+    po.setTotalCost(totalCost);
+
+    // Expected delivery date berdasarkan lead time supplier
+    if (supplier.getLeadTimeDays() != null) {
+        po.setExpectedDeliveryDate(LocalDateTime.now().plusDays(supplier.getLeadTimeDays()));
     }
+
+    PurchaseOrder savedPO = purchaseOrderRepository.save(po);
+
+    return convertToPurchaseOrderResponse(savedPO);
+}
+
 
     private PurchaseOrderResponse convertToPurchaseOrderResponse(PurchaseOrder po) {
         List<OrderItemResponse> itemResponses = po.getItems().stream()

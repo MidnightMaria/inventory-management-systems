@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -28,6 +29,12 @@ public class PurchaseOrder {
     @CreationTimestamp
     @Column(name = "order_date", updatable = false)
     private LocalDateTime orderDate;
+
+    @Column(name = "expected_delivery_date")
+    private LocalDateTime expectedDeliveryDate; // dihitung dari lead time supplier
+
+    @Column(name = "total_cost")
+    private BigDecimal totalCost; // total biaya pesanan (sum of items + biaya order supplier)
 
     @Enumerated(EnumType.STRING)
     private PurchaseOrderStatus status;
