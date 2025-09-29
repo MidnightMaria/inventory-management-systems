@@ -19,7 +19,7 @@ public class Sales {
 
     // Relasi ke Product
     @ManyToOne
-    @JoinColumn(name = "product_sku", referencedColumnName = "sku")
+    @JoinColumn(name = "product_sku", referencedColumnName = "sku", nullable = false)
     private Product product;
 
     private int quantity;

@@ -5,11 +5,10 @@ import com.agnesmaria.inventory.springboot.model.Sales;
 import com.agnesmaria.inventory.springboot.repository.ProductRepository;
 import com.agnesmaria.inventory.springboot.repository.SalesRepository;
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -36,9 +35,9 @@ public class SalesService {
         product.setStock(product.getStock() - quantity);
         productRepository.save(product);
 
-        // Simpan sales
+        // Buat sales
         Sales sales = Sales.builder()
-                .product(product) // pakai relasi, bukan SKU string
+                .product(product)
                 .quantity(quantity)
                 .timestamp(LocalDateTime.now())
                 .build();
@@ -51,8 +50,10 @@ public class SalesService {
     }
 
     public List<Sales> getSalesBySku(String sku) {
-        Product product = productRepository.findBySku(sku)
-                .orElseThrow(() -> new IllegalArgumentException("Product not found with SKU: " + sku));
+        Product product = productRepository.findById(sku)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Product not found with SKU: " + sku));
+
         return salesRepository.findByProduct(product);
     }
 }
