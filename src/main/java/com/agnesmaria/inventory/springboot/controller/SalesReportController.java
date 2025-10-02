@@ -2,24 +2,25 @@ package com.agnesmaria.inventory.springboot.controller;
 
 import com.agnesmaria.inventory.springboot.dto.SalesReportResponse;
 import com.agnesmaria.inventory.springboot.service.SalesReportService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/sales/export")
+@RequestMapping("/api/sales/report")
 @RequiredArgsConstructor
-public class SalesExportController {
+public class SalesReportController {
 
     private final SalesReportService salesReportService;
+    private final ObjectMapper objectMapper = new ObjectMapper(); // untuk JSON export
 
     /**
      * Export total sales per product as CSV
@@ -31,10 +32,8 @@ public class SalesExportController {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         PrintWriter writer = new PrintWriter(out, true, StandardCharsets.UTF_8);
 
-        // Header CSV
         writer.println("SKU,Product Name,Total Quantity,Total Revenue");
 
-        // Rows
         for (SalesReportResponse report : reports) {
             writer.printf("%s,%s,%d,%s%n",
                     report.getSku(),
@@ -62,10 +61,8 @@ public class SalesExportController {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         PrintWriter writer = new PrintWriter(out, true, StandardCharsets.UTF_8);
 
-        // Header CSV
         writer.println("Date,SKU,Product Name,Total Quantity,Total Revenue");
 
-        // Rows
         for (SalesReportResponse report : reports) {
             writer.printf("%s,%s,%s,%d,%s%n",
                     report.getDate(),
@@ -82,5 +79,34 @@ public class SalesExportController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=daily_sales.csv")
                 .contentType(MediaType.parseMediaType("text/csv"))
                 .body(csvBytes);
+    }
+
+    /**
+     * Export sales as JSON
+     */
+    @GetMapping("/export/json")
+    public ResponseEntity<byte[]> exportSalesJson(@RequestParam(defaultValue = "daily") String type) {
+        try {
+            List<SalesReportResponse> reports;
+            String filename;
+
+            if (type.equalsIgnoreCase("total")) {
+                reports = salesReportService.getTotalSalesPerProduct();
+                filename = "total_sales.json";
+            } else {
+                reports = salesReportService.getDailySales();
+                filename = "daily_sales.json";
+            }
+
+            byte[] jsonBytes = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(reports);
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(jsonBytes);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                    .body(("Error generating JSON: " + e.getMessage()).getBytes(StandardCharsets.UTF_8));
+        }
     }
 }
