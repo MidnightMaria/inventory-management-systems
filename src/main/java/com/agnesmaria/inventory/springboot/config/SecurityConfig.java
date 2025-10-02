@@ -29,8 +29,19 @@ public class SecurityConfig {
     http
         .csrf(AbstractHttpConfigurer::disable)
         .authorizeHttpRequests(auth -> auth
+            // allow public access
             .requestMatchers("/api/auth/**").permitAll()
-            .requestMatchers("/api/products/**").authenticated() // Require auth for products
+
+            // allow swagger docs
+            .requestMatchers(
+                "/swagger-ui/**",
+                "/v3/api-docs/**",
+                "/swagger-resources/**",
+                "/swagger-resources",
+                "/webjars/**"
+            ).permitAll()
+
+            // everything else requires auth
             .anyRequest().authenticated()
         )
         .sessionManagement(sess -> sess
