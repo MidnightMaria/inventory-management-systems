@@ -17,12 +17,13 @@ public class Sales {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Relasi ke Product
     @ManyToOne
     @JoinColumn(name = "product_sku", referencedColumnName = "sku", nullable = false)
     private Product product;
 
     private int quantity;
+
+    private java.math.BigDecimal price; // harga per unit saat transaksi
 
     private LocalDateTime timestamp;
 }
