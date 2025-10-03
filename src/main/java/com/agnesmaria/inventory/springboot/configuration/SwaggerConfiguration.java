@@ -37,67 +37,108 @@ public class SwaggerConfiguration {
     @Bean
     public OpenAPI customOpenAPI() {
         final String securitySchemeName = "bearerAuth";
-        
+
         return new OpenAPI()
-            .servers(List.of(
-                new Server().url("http://localhost:8080").description("Local Development Server")
-            ))
-            .info(getApiInformation())
-            .addSecurityItem(new SecurityRequirement().addList(securitySchemeName))
-            .components(new Components()
-                .addSecuritySchemes(securitySchemeName,
-                    new SecurityScheme()
-                        .name(securitySchemeName)
-                        .type(HTTP)
-                        .scheme("bearer")
-                        .bearerFormat("JWT")
-                )
-            );
+                .servers(List.of(
+                        new Server().url("http://localhost:8080").description("Local Development Server")
+                ))
+                .info(getApiInformation())
+                .addSecurityItem(new SecurityRequirement().addList(securitySchemeName))
+                .components(new Components()
+                        .addSecuritySchemes(securitySchemeName,
+                                new SecurityScheme()
+                                        .name(securitySchemeName)
+                                        .type(HTTP)
+                                        .scheme("bearer")
+                                        .bearerFormat("JWT")
+                        )
+                );
     }
 
     private Info getApiInformation() {
         return new Info()
-            .title(appName)
-            .version(appVersion)
-            .description(appDescription)
-            .license(new License()
-                .name(appLicense)
-                .url(appLicenseUrl))
-            .contact(new Contact()
-                .name(contactName)
-                .url(contactUrl)
-                .email(contactMail));
+                .title(appName)
+                .version(appVersion)
+                .description(appDescription)
+                .license(new License()
+                        .name(appLicense)
+                        .url(appLicenseUrl))
+                .contact(new Contact()
+                        .name(contactName)
+                        .url(contactUrl)
+                        .email(contactMail));
     }
 
+    // Grouped APIs
     @Bean
     GroupedOpenApi authApi() {
         return GroupedOpenApi.builder()
-            .group("Authentication")
-            .pathsToMatch("/api/auth/**")
-            .build();
+                .group("Authentication")
+                .pathsToMatch("/api/auth/**")
+                .build();
     }
 
     @Bean
     GroupedOpenApi productApi() {
         return GroupedOpenApi.builder()
-            .group("Products")
-            .pathsToMatch("/api/products/**")
-            .build();
+                .group("Products")
+                .pathsToMatch("/api/products/**")
+                .build();
+    }
+
+    @Bean
+    GroupedOpenApi warehouseApi() {
+        return GroupedOpenApi.builder()
+                .group("Warehouses")
+                .pathsToMatch("/api/warehouses/**")
+                .build();
+    }
+
+    @Bean
+    GroupedOpenApi inventoryApi() {
+        return GroupedOpenApi.builder()
+                .group("Inventory")
+                .pathsToMatch("/api/inventory/**")
+                .build();
+    }
+
+    @Bean
+    GroupedOpenApi purchaseOrderApi() {
+        return GroupedOpenApi.builder()
+                .group("Purchase Orders")
+                .pathsToMatch("/api/purchase-orders/**")
+                .build();
+    }
+
+    @Bean
+    GroupedOpenApi salesApi() {
+        return GroupedOpenApi.builder()
+                .group("Sales")
+                .pathsToMatch("/api/sales/**")
+                .build();
+    }
+
+    @Bean
+    GroupedOpenApi salesReportApi() {
+        return GroupedOpenApi.builder()
+                .group("Sales Reports")
+                .pathsToMatch("/api/sales/report/**")
+                .build();
+    }
+
+    @Bean
+    GroupedOpenApi supplierApi() {
+        return GroupedOpenApi.builder()
+                .group("Suppliers")
+                .pathsToMatch("/api/suppliers/**")
+                .build();
     }
 
     @Bean
     GroupedOpenApi managementApi() {
         return GroupedOpenApi.builder()
-            .group("Management")
-            .pathsToMatch("/actuator/**")
-            .build();
+                .group("Management")
+                .pathsToMatch("/actuator/**")
+                .build();
     }
-
-    @Bean
-    GroupedOpenApi warehouseApi() {
-    return GroupedOpenApi.builder()
-        .group("Warehouses")
-        .pathsToMatch("/api/warehouses/**")
-        .build();
-}
 }
