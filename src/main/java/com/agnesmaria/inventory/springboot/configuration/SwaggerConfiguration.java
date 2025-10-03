@@ -92,4 +92,12 @@ public class SwaggerConfiguration {
             .pathsToMatch("/actuator/**")
             .build();
     }
+
+    @Bean
+    GroupedOpenApi warehouseApi() {
+    return GroupedOpenApi.builder()
+        .group("Warehouses")
+        .pathsToMatch("/api/warehouses/**")
+        .build();
+}
 }
