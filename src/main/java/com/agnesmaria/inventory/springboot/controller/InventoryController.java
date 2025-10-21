@@ -97,7 +97,11 @@ public class InventoryController {
     @Operation(summary = "Export full inventory data for analytics")
     public ResponseEntity<List<InventoryResponse>> exportAllInventory() {
     return ResponseEntity.ok(inventoryService.getAllInventory());
-}
+    }
 
-
+    @PostMapping("/reduce-stock")
+    public ResponseEntity<InventoryResponse> reduceStock(@Valid @RequestBody InventoryRequest request) {
+    InventoryResponse response = inventoryService.reduceStock(request);
+    return ResponseEntity.ok(response);
+    }
 }
