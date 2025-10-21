@@ -80,4 +80,10 @@ public class ProductController {
         return productService.getProductBySku(sku).getStock();
     }
 
+    @GetMapping("/export")
+    public List<Product> exportProducts() {
+    return productService.getAllProducts();
+    }
+
+
 }

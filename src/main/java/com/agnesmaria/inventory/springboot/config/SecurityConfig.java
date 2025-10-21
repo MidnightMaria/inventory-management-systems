@@ -14,6 +14,7 @@ import org.springframework.security.crypto.password.DelegatingPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -26,31 +27,34 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-    http
-        .csrf(AbstractHttpConfigurer::disable)
-        .authorizeHttpRequests(auth -> auth
-            // allow public access
-            .requestMatchers("/api/auth/**").permitAll()
+        http
+            .csrf(AbstractHttpConfigurer::disable)
+            .authorizeHttpRequests(auth -> auth
+                // ✅ Allow actuator (for Docker healthcheck)
+                .requestMatchers("/actuator/**").permitAll()
 
-            // allow swagger docs
-            .requestMatchers(
-                "/swagger-ui/**",
-                "/v3/api-docs/**",
-                "/swagger-resources/**",
-                "/swagger-resources",
-                "/webjars/**"
-            ).permitAll()
+                // ✅ Allow authentication endpoints
+                .requestMatchers("/api/auth/**").permitAll()
 
-            // everything else requires auth
-            .anyRequest().authenticated()
-        )
-        .sessionManagement(sess -> sess
-            .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-        )
-        .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                // ✅ Allow Swagger & API docs
+                .requestMatchers(
+                    "/swagger-ui/**",
+                    "/v3/api-docs/**",
+                    "/swagger-resources/**",
+                    "/swagger-resources",
+                    "/webjars/**"
+                ).permitAll()
 
-    return http.build();
-}
+                // 🚫 Require JWT for everything else
+                .anyRequest().authenticated()
+            )
+            .sessionManagement(sess ->
+                sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            )
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
+    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
