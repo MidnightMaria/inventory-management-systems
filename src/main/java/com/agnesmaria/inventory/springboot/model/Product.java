@@ -14,26 +14,32 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class Product {
+
     @Id
     @Column(name = "sku", nullable = false, unique = true)
     private String sku;
-    
+
     @Column(nullable = false)
     private String name;
-    
+
     private String description;
-    
+
     @Column(nullable = false)
     private BigDecimal price;
-    
+
     @Column(name = "min_stock")
     private int minStock;
-    
-    // Jumlah stok tersedia
+
+    /**
+     * 🔹 Jumlah stok total dari semua warehouse.
+     * Field ini sekarang menjadi representasi utama dari stok produk.
+     */
     @Column(name = "quantity")
     private int quantity;
 
-    // Untuk dynamic pricing
+    /**
+     * 🔹 Aktifkan bila sistem dynamic pricing terhubung dengan data science service.
+     */
     @Column(name = "dynamic_pricing")
     private boolean dynamicPricing;
 
@@ -43,7 +49,4 @@ public class Product {
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
-
-    @Column(name = "stock")
-    private int stock;
 }

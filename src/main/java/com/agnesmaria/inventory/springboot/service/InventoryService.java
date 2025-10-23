@@ -25,66 +25,58 @@ public class InventoryService {
 
     @Transactional
     public InventoryResponse updateStock(InventoryRequest request) {
-        try {
-            Product product = productService.getProductBySku(request.getProductSku());
-            Warehouse warehouse = warehouseRepository.findById(request.getWarehouseId())
-                    .orElseThrow(() -> new WarehouseNotFoundException(request.getWarehouseId()));
+        Product product = productService.getProductBySku(request.getProductSku());
+        Warehouse warehouse = warehouseRepository.findById(request.getWarehouseId())
+                .orElseThrow(() -> new WarehouseNotFoundException(request.getWarehouseId()));
 
-            InventoryItem item = inventoryItemRepository
-                    .findByProductAndWarehouse(product, warehouse)
-                    .orElseGet(() -> InventoryItem.builder()
-                            .product(product)
-                            .warehouse(warehouse)
-                            .quantity(0)
-                            .build());
+        InventoryItem item = inventoryItemRepository.findByProductAndWarehouse(product, warehouse)
+                .orElseGet(() -> InventoryItem.builder()
+                        .product(product)
+                        .warehouse(warehouse)
+                        .quantity(0)
+                        .build());
 
-            int oldQuantity = item.getQuantity();
-            int newQuantity = switch (request.getMovementType()) {
-                case "IN" -> oldQuantity + request.getQuantity();
-                case "OUT" -> Math.max(0, oldQuantity - request.getQuantity());
-                case "ADJUST" -> request.getQuantity();
-                default -> oldQuantity;
-            };
+        int oldQty = item.getQuantity();
+        int newQty = switch (request.getMovementType()) {
+            case "IN" -> oldQty + request.getQuantity();
+            case "OUT" -> Math.max(0, oldQty - request.getQuantity());
+            case "ADJUST" -> request.getQuantity();
+            default -> oldQty;
+        };
 
-            item.setQuantity(newQuantity);
-            inventoryItemRepository.save(item);
+        item.setQuantity(newQty);
+        inventoryItemRepository.save(item);
+        recordMovement(product, warehouse, oldQty, newQty, request.getMovementType(), request.getAdjustmentReason());
+        syncProductStock(product);
 
-            recordInventoryMovement(product, warehouse, oldQuantity, newQuantity,
-                    request.getMovementType(), request.getAdjustmentReason(), request.getReferenceNumber());
-
-            syncProductStock(product);
-            return buildResponse(product, warehouse, item, oldQuantity);
-
-        } catch (Exception e) {
-            log.error("💥 Error updating stock", e);
-            throw new InventoryUpdateException("Failed to update inventory stock", e);
-        }
+        log.info("✅ Updated stock for {} ({} → {}) in warehouse {}", product.getSku(), oldQty, newQty, warehouse.getCode());
+        return buildResponse(product, warehouse, item, oldQty);
     }
 
     @Transactional
     public InventoryResponse updateStockInternal(InventoryRequest request) {
-        log.info("🔗 Internal stock update triggered for {}", request.getProductSku());
+        log.info("🔗 Internal stock update triggered from Supply Chain for {}", request.getProductSku());
         return updateStock(request);
     }
 
-    private void recordInventoryMovement(Product product, Warehouse warehouse,
-                                         int oldQty, int newQty, String movementType,
-                                         String reason, String reference) {
-        try {
-            InventoryMovement movement = InventoryMovement.builder()
-                    .product(product)
-                    .warehouse(warehouse)
-                    .previousQuantity(oldQty)
-                    .newQuantity(newQty)
-                    .difference(newQty - oldQty)
-                    .movementType(movementType)
-                    .reason(reason)
-                    .referenceNumber(reference)
-                    .build();
-            inventoryMovementRepository.save(movement);
-        } catch (Exception e) {
-            log.warn("⚠️ Failed to record movement: {}", e.getMessage());
-        }
+    @Transactional
+    public InventoryResponse reduceStock(InventoryRequest request) {
+        request.setMovementType("OUT");
+        return updateStock(request);
+    }
+
+    private void recordMovement(Product product, Warehouse warehouse, int oldQty, int newQty,
+                                String movementType, String reason) {
+        InventoryMovement movement = InventoryMovement.builder()
+                .product(product)
+                .warehouse(warehouse)
+                .previousQuantity(oldQty)
+                .newQuantity(newQty)
+                .difference(newQty - oldQty)
+                .movementType(movementType)
+                .reason(reason)
+                .build();
+        inventoryMovementRepository.save(movement);
     }
 
     private void syncProductStock(Product product) {
@@ -94,15 +86,15 @@ public class InventoryService {
     }
 
     private InventoryResponse buildResponse(Product product, Warehouse warehouse,
-                                            InventoryItem item, int oldQuantity) {
+                                            InventoryItem item, int oldQty) {
         return InventoryResponse.builder()
                 .productSku(product.getSku())
                 .productName(product.getName())
                 .warehouseCode(warehouse.getCode())
-                .previousStock(oldQuantity)
+                .previousStock(oldQty)
                 .currentStock(item.getQuantity())
-                .difference(item.getQuantity() - oldQuantity)
-                .movementType(item.getQuantity() > oldQuantity ? "IN" : "OUT")
+                .difference(item.getQuantity() - oldQty)
+                .movementType(item.getQuantity() > oldQty ? "IN" : "OUT")
                 .updatedAt(LocalDateTime.now())
                 .build();
     }
@@ -112,8 +104,7 @@ public class InventoryService {
     }
 
     public Integer getStockByProductAndWarehouse(String sku, Long warehouseId) {
-        return inventoryItemRepository.findQuantityByProductAndWarehouse(sku, warehouseId)
-                .orElse(0);
+        return inventoryItemRepository.findQuantityByProductAndWarehouse(sku, warehouseId).orElse(0);
     }
 
     public List<InventoryResponse> getAllInventory() {
@@ -126,25 +117,5 @@ public class InventoryService {
                         .updatedAt(item.getUpdatedAt())
                         .build())
                 .toList();
-    }
-
-    public InventoryResponse reduceStock(InventoryRequest request) {
-        Product product = productService.getProductBySku(request.getProductSku());
-        Warehouse warehouse = warehouseRepository.findById(request.getWarehouseId())
-                .orElseThrow(() -> new WarehouseNotFoundException(request.getWarehouseId()));
-
-        InventoryItem item = inventoryItemRepository.findByProductAndWarehouse(product, warehouse)
-                .orElseThrow(() -> new InventoryQueryException("No stock record found"));
-
-        int oldQuantity = item.getQuantity();
-        int newQuantity = Math.max(0, oldQuantity - request.getQuantity());
-        item.setQuantity(newQuantity);
-        inventoryItemRepository.save(item);
-
-        recordInventoryMovement(product, warehouse, oldQuantity, newQuantity,
-                "OUT", request.getAdjustmentReason(), request.getReferenceNumber());
-        syncProductStock(product);
-
-        return buildResponse(product, warehouse, item, oldQuantity);
     }
 }

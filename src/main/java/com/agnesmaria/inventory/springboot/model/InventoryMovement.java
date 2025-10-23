@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class InventoryMovement {
+
     @Id 
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -45,8 +46,11 @@ public class InventoryMovement {
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
-    
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
-    private User performedBy;
+
+    /**
+     * Nama user atau sistem yang melakukan perubahan stok.
+     * Sekarang disimpan sebagai teks karena sistem sudah tanpa authentication.
+     */
+    @Column(name = "performed_by", length = 100)
+    private String performedBy;
 }

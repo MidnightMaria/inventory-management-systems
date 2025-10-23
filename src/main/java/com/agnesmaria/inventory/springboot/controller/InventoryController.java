@@ -2,18 +2,11 @@ package com.agnesmaria.inventory.springboot.controller;
 
 import com.agnesmaria.inventory.springboot.dto.InventoryRequest;
 import com.agnesmaria.inventory.springboot.dto.InventoryResponse;
-import com.agnesmaria.inventory.springboot.exception.InventoryQueryException;
-import com.agnesmaria.inventory.springboot.exception.ProductNotFoundException;
-import com.agnesmaria.inventory.springboot.exception.WarehouseNotFoundException;
 import com.agnesmaria.inventory.springboot.service.InventoryService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,59 +15,47 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/inventory")
 @RequiredArgsConstructor
-@Tag(name = "Inventory Management", description = "APIs for managing inventory stock levels")
+@Tag(name = "Inventory Management", description = "Endpoints for managing inventory stock levels")
 public class InventoryController {
+
     private final InventoryService inventoryService;
 
     @PostMapping("/adjust-stock")
-    @Operation(summary = "Adjust inventory stock level",
-            description = "Update stock quantity for a product in a warehouse")
+    @Operation(summary = "Adjust stock manually (IN, OUT, ADJUST)")
     public ResponseEntity<InventoryResponse> adjustStock(@Valid @RequestBody InventoryRequest request) {
-        try {
-            InventoryResponse response = inventoryService.updateStock(request);
-            return ResponseEntity.ok(response);
-        } catch (ProductNotFoundException | WarehouseNotFoundException e) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        } catch (Exception e) {
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    @GetMapping("/product/{sku}/total")
-    public ResponseEntity<Integer> getTotalStockByProduct(@PathVariable String sku) {
-        try {
-            Integer totalStock = inventoryService.getTotalStockByProduct(sku);
-            return (totalStock != null) ? ResponseEntity.ok(totalStock)
-                    : new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        } catch (InventoryQueryException e) {
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    @GetMapping("/product/{sku}/warehouse/{warehouseId}")
-    public ResponseEntity<Integer> getWarehouseStock(
-            @PathVariable String sku, @PathVariable Long warehouseId) {
-        try {
-            return ResponseEntity.ok(inventoryService.getStockByProductAndWarehouse(sku, warehouseId));
-        } catch (InventoryQueryException e) {
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    @GetMapping("/export")
-    public ResponseEntity<List<InventoryResponse>> exportAllInventory() {
-        return ResponseEntity.ok(inventoryService.getAllInventory());
+        return ResponseEntity.ok(inventoryService.updateStock(request));
     }
 
     @PostMapping("/reduce-stock")
+    @Operation(summary = "Reduce stock due to sales or shipment")
     public ResponseEntity<InventoryResponse> reduceStock(@Valid @RequestBody InventoryRequest request) {
         return ResponseEntity.ok(inventoryService.reduceStock(request));
     }
 
-    // Internal endpoint untuk Supply Chain Service
+    @GetMapping("/product/{sku}/total")
+    @Operation(summary = "Get total stock by product SKU")
+    public ResponseEntity<Integer> getTotalStock(@PathVariable String sku) {
+        return ResponseEntity.ok(inventoryService.getTotalStockByProduct(sku));
+    }
+
+    @GetMapping("/product/{sku}/warehouse/{warehouseId}")
+    @Operation(summary = "Get stock in specific warehouse")
+    public ResponseEntity<Integer> getStockByWarehouse(
+            @PathVariable String sku,
+            @PathVariable Long warehouseId) {
+        return ResponseEntity.ok(inventoryService.getStockByProductAndWarehouse(sku, warehouseId));
+    }
+
+    @GetMapping("/export")
+    @Operation(summary = "Export all inventory data for analytics")
+    public ResponseEntity<List<InventoryResponse>> exportInventory() {
+        return ResponseEntity.ok(inventoryService.getAllInventory());
+    }
+
+    // 🔹 New endpoint for Supply Chain Service integration
     @PostMapping("/internal/adjust-stock")
-    public ResponseEntity<InventoryResponse> adjustStockInternal(@Valid @RequestBody InventoryRequest request) {
-        InventoryResponse response = inventoryService.updateStockInternal(request);
-        return ResponseEntity.ok(response);
+    @Operation(summary = "Internal: Adjust stock after purchase order is received")
+    public ResponseEntity<InventoryResponse> adjustStockInternal(@RequestBody InventoryRequest request) {
+        return ResponseEntity.ok(inventoryService.updateStockInternal(request));
     }
 }

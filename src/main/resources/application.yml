@@ -1,6 +1,9 @@
+server:
+  port: 8080
+
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/inventory_db
+    url: jdbc:postgresql://postgres:5432/inventory_db
     username: postgres
     password: yourpassword
     hikari:
@@ -12,21 +15,29 @@ spring:
     properties:
       hibernate:
         format_sql: true
+  application:
+    name: inventory-service
 
-jwt:
-  secret-key: PHDTDumRh+WBCB5cyzK1NmYFwEZpFgDUMomR6C7NeqM=
-  issuer: www.agnesmaria.com
-  expiration: 86400000
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
 
 logging:
   level:
-    org.springframework.security: DEBUG
+    root: INFO
     com.agnesmaria.inventory: DEBUG
-    
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql: TRACE
+
 swagger:
   app-name: Inventory Management System
-  app-description: "Inventory management system with JWT authentication"
-  app-version: 1.0.0
+  app-description: "Microservice for managing inventory and warehouse stock levels"
+  app-version: 2.0.0
   app-license: MIT
   app-license-url: https://opensource.org/licenses/MIT
   contact-name: Agnes Maria
