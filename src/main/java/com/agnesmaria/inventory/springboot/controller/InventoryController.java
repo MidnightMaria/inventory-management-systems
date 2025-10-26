@@ -2,6 +2,7 @@ package com.agnesmaria.inventory.springboot.controller;
 
 import com.agnesmaria.inventory.springboot.dto.InventoryRequest;
 import com.agnesmaria.inventory.springboot.dto.InventoryResponse;
+import com.agnesmaria.inventory.springboot.model.InventoryMovement;
 import com.agnesmaria.inventory.springboot.service.InventoryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -15,7 +16,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/inventory")
 @RequiredArgsConstructor
-@Tag(name = "Inventory Management", description = "Endpoints for managing inventory stock levels")
+@Tag(name = "Inventory Management", description = "Endpoints for managing inventory stock levels and movement logs")
 public class InventoryController {
 
     private final InventoryService inventoryService;
@@ -52,10 +53,24 @@ public class InventoryController {
         return ResponseEntity.ok(inventoryService.getAllInventory());
     }
 
-    // 🔹 New endpoint for Supply Chain Service integration
+    // 🔹 Endpoint untuk Supply Chain Service
     @PostMapping("/internal/adjust-stock")
     @Operation(summary = "Internal: Adjust stock after purchase order is received")
     public ResponseEntity<InventoryResponse> adjustStockInternal(@RequestBody InventoryRequest request) {
         return ResponseEntity.ok(inventoryService.updateStockInternal(request));
+    }
+
+    // 🧾 Get all inventory movement logs
+    @GetMapping("/movements")
+    @Operation(summary = "Get all inventory movement logs", description = "Retrieve all stock movement records")
+    public ResponseEntity<List<InventoryMovement>> getAllMovements() {
+        return ResponseEntity.ok(inventoryService.getAllMovements());
+    }
+
+    // 📤 Export inventory movements for analytics
+    @GetMapping("/movements/export")
+    @Operation(summary = "Export inventory movement data", description = "Export historical movement data for analytics or forecasting")
+    public ResponseEntity<List<InventoryMovement>> exportMovements() {
+        return ResponseEntity.ok(inventoryService.exportMovements());
     }
 }

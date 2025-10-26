@@ -2,13 +2,14 @@ package com.agnesmaria.inventory.springboot.service;
 
 import com.agnesmaria.inventory.springboot.dto.InventoryRequest;
 import com.agnesmaria.inventory.springboot.dto.InventoryResponse;
-import com.agnesmaria.inventory.springboot.exception.*;
+import com.agnesmaria.inventory.springboot.exception.WarehouseNotFoundException;
 import com.agnesmaria.inventory.springboot.model.*;
 import com.agnesmaria.inventory.springboot.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -23,6 +24,7 @@ public class InventoryService {
     private final InventoryItemRepository inventoryItemRepository;
     private final InventoryMovementRepository inventoryMovementRepository;
 
+    // ✅ Manual or internal stock adjustment
     @Transactional
     public InventoryResponse updateStock(InventoryRequest request) {
         Product product = productService.getProductBySku(request.getProductSku());
@@ -40,33 +42,41 @@ public class InventoryService {
         int newQty = switch (request.getMovementType()) {
             case "IN" -> oldQty + request.getQuantity();
             case "OUT" -> Math.max(0, oldQty - request.getQuantity());
-            case "ADJUST" -> request.getQuantity();
+            case "ADJUST", "ADJUSTMENT" -> request.getQuantity();
             default -> oldQty;
         };
 
         item.setQuantity(newQty);
         inventoryItemRepository.save(item);
-        recordMovement(product, warehouse, oldQty, newQty, request.getMovementType(), request.getAdjustmentReason());
+
+        recordMovement(product, warehouse, oldQty, newQty,
+                request.getMovementType(), request.getAdjustmentReason(),
+                request.getReferenceNumber(), "SYSTEM");
+
         syncProductStock(product);
 
         log.info("✅ Updated stock for {} ({} → {}) in warehouse {}", product.getSku(), oldQty, newQty, warehouse.getCode());
         return buildResponse(product, warehouse, item, oldQty);
     }
 
+    // 🔗 Used by Supply Chain Service integration
     @Transactional
     public InventoryResponse updateStockInternal(InventoryRequest request) {
         log.info("🔗 Internal stock update triggered from Supply Chain for {}", request.getProductSku());
         return updateStock(request);
     }
 
+    // 🚚 Reduce stock due to sales/shipment
     @Transactional
     public InventoryResponse reduceStock(InventoryRequest request) {
         request.setMovementType("OUT");
         return updateStock(request);
     }
 
+    // 🧾 Record stock movement (for audit + analytics)
     private void recordMovement(Product product, Warehouse warehouse, int oldQty, int newQty,
-                                String movementType, String reason) {
+                                String movementType, String reason, String referenceNumber, String performedBy) {
+
         InventoryMovement movement = InventoryMovement.builder()
                 .product(product)
                 .warehouse(warehouse)
@@ -74,17 +84,23 @@ public class InventoryService {
                 .newQuantity(newQty)
                 .difference(newQty - oldQty)
                 .movementType(movementType)
-                .reason(reason)
+                .reason(reason != null ? reason : "N/A")
+                .referenceNumber(referenceNumber != null ? referenceNumber : "N/A")
+                .performedBy(performedBy != null ? performedBy : "SYSTEM")
                 .build();
+
         inventoryMovementRepository.save(movement);
+        log.info("📦 Movement recorded: [{}] {} {} ({} → {}) - Ref: {}", movementType, product.getSku(), reason, oldQty, newQty, referenceNumber);
     }
 
+    // 🔁 Update total stock on product table
     private void syncProductStock(Product product) {
         Integer totalStock = inventoryItemRepository.sumQuantityByProductSku(product.getSku());
         product.setQuantity(totalStock != null ? totalStock : 0);
         productRepository.save(product);
     }
 
+    // 📄 Build response for API
     private InventoryResponse buildResponse(Product product, Warehouse warehouse,
                                             InventoryItem item, int oldQty) {
         return InventoryResponse.builder()
@@ -99,6 +115,7 @@ public class InventoryService {
                 .build();
     }
 
+    // 🔍 Query utilities
     public Integer getTotalStockByProduct(String sku) {
         return inventoryItemRepository.sumQuantityByProductSku(sku);
     }
@@ -116,6 +133,21 @@ public class InventoryService {
                         .currentStock(item.getQuantity())
                         .updatedAt(item.getUpdatedAt())
                         .build())
+                .toList();
+    }
+
+    // 📜 Get all movements (for monitoring)
+    public List<InventoryMovement> getAllMovements() {
+        return inventoryMovementRepository.findAll();
+    }
+
+    // 📤 Export data for analytics (6 months window)
+    public List<InventoryMovement> exportMovements() {
+        LocalDateTime sixMonthsAgo = LocalDateTime.now().minusMonths(6);
+        return inventoryMovementRepository.findAll().stream()
+                .filter(m -> m.getCreatedAt().isAfter(sixMonthsAgo))
+                .filter(m -> m.getMovementType().equalsIgnoreCase("OUT")
+                        || m.getMovementType().equalsIgnoreCase("IN"))
                 .toList();
     }
 }
