@@ -1,5 +1,6 @@
 package com.agnesmaria.inventory.springboot.controller;
 
+import com.agnesmaria.inventory.springboot.dto.InventoryMovementResponse;
 import com.agnesmaria.inventory.springboot.dto.InventoryRequest;
 import com.agnesmaria.inventory.springboot.dto.InventoryResponse;
 import com.agnesmaria.inventory.springboot.model.InventoryMovement;
@@ -72,5 +73,12 @@ public class InventoryController {
     @Operation(summary = "Export inventory movement data", description = "Export historical movement data for analytics or forecasting")
     public ResponseEntity<List<InventoryMovement>> exportMovements() {
         return ResponseEntity.ok(inventoryService.exportMovements());
+    }
+
+    @GetMapping("/movements/export/summary")
+    @Operation(summary = "Export summarized movement data", 
+            description = "Simplified version for forecasting or analytics")
+    public ResponseEntity<List<InventoryMovementResponse>> exportMovementSummary() {
+        return ResponseEntity.ok(inventoryService.exportMovementSummary());
     }
 }

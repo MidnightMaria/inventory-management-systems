@@ -1,5 +1,6 @@
 package com.agnesmaria.inventory.springboot.service;
 
+import com.agnesmaria.inventory.springboot.dto.InventoryMovementResponse;
 import com.agnesmaria.inventory.springboot.dto.InventoryRequest;
 import com.agnesmaria.inventory.springboot.dto.InventoryResponse;
 import com.agnesmaria.inventory.springboot.exception.WarehouseNotFoundException;
@@ -149,5 +150,21 @@ public class InventoryService {
                 .filter(m -> m.getMovementType().equalsIgnoreCase("OUT")
                         || m.getMovementType().equalsIgnoreCase("IN"))
                 .toList();
+    }
+
+    public List<InventoryMovementResponse> exportMovementSummary() {
+    LocalDateTime sixMonthsAgo = LocalDateTime.now().minusMonths(6);
+    return inventoryMovementRepository.findAll().stream()
+            .filter(m -> m.getCreatedAt().isAfter(sixMonthsAgo))
+            .map(m -> InventoryMovementResponse.builder()
+                    .productSku(m.getProduct().getSku())
+                    .warehouseCode(m.getWarehouse().getCode())
+                    .movementType(m.getMovementType())
+                    .difference(m.getDifference())
+                    .reason(m.getReason())
+                    .referenceNumber(m.getReferenceNumber())
+                    .createdAt(m.getCreatedAt())
+                    .build())
+            .toList();
     }
 }
