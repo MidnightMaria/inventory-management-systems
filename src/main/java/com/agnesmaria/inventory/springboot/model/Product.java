@@ -1,5 +1,6 @@
 package com.agnesmaria.inventory.springboot.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -13,6 +14,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Product {
 
     @Id
@@ -30,16 +32,9 @@ public class Product {
     @Column(name = "min_stock")
     private int minStock;
 
-    /**
-     * 🔹 Jumlah stok total dari semua warehouse.
-     * Field ini sekarang menjadi representasi utama dari stok produk.
-     */
     @Column(name = "quantity")
     private int quantity;
 
-    /**
-     * 🔹 Aktifkan bila sistem dynamic pricing terhubung dengan data science service.
-     */
     @Column(name = "dynamic_pricing")
     private boolean dynamicPricing;
 

@@ -1,5 +1,6 @@
 package com.agnesmaria.inventory.springboot.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -11,6 +12,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class InventoryMovement {
 
     @Id
@@ -19,25 +21,29 @@ public class InventoryMovement {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Product product;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "warehouse_id", nullable = true)
-    private Warehouse warehouse; // optional kalau TRANSFER punya dua warehouse
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private Warehouse warehouse;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "from_warehouse_id", nullable = true)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Warehouse fromWarehouse;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "to_warehouse_id", nullable = true)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Warehouse toWarehouse;
 
-    private Integer quantity;            // ✅ tambahkan ini
+    private Integer quantity;
     private Integer previousQuantity;
     private Integer newQuantity;
     private Integer difference;
-    private String movementType;         // e.g. IN, OUT, TRANSFER
+    private String movementType;
     private String reason;
     private String referenceNumber;
     private String performedBy;

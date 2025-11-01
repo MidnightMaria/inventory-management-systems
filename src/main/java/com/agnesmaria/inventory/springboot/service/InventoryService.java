@@ -1,10 +1,6 @@
 package com.agnesmaria.inventory.springboot.service;
 
-import com.agnesmaria.inventory.springboot.dto.InventoryMovementResponse;
-import com.agnesmaria.inventory.springboot.dto.InventoryRequest;
-import com.agnesmaria.inventory.springboot.dto.InventoryResponse;
-import com.agnesmaria.inventory.springboot.dto.StockTransferRequest;
-import com.agnesmaria.inventory.springboot.dto.StockTransferResponse;
+import com.agnesmaria.inventory.springboot.dto.*;
 import com.agnesmaria.inventory.springboot.exception.InventoryQueryException;
 import com.agnesmaria.inventory.springboot.exception.InventoryUpdateException;
 import com.agnesmaria.inventory.springboot.exception.WarehouseNotFoundException;
@@ -17,6 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -29,40 +27,127 @@ public class InventoryService {
     private final InventoryItemRepository inventoryItemRepository;
     private final InventoryMovementRepository inventoryMovementRepository;
 
-    // ✅ Manual or internal stock adjustment
-    @Transactional
-    public InventoryResponse updateStock(InventoryRequest request) {
-        Product product = productService.getProductBySku(request.getProductSku());
-        Warehouse warehouse = warehouseRepository.findById(request.getWarehouseId())
-                .orElseThrow(() -> new WarehouseNotFoundException(request.getWarehouseId()));
+    /* =========================================================
+     * Helpers
+     * ========================================================= */
 
-        InventoryItem item = inventoryItemRepository.findByProductAndWarehouse(product, warehouse)
+    private InventoryItem getOrCreateItem(Product product, Warehouse warehouse) {
+        return inventoryItemRepository
+                .findByProductAndWarehouse(product, warehouse)
                 .orElseGet(() -> InventoryItem.builder()
                         .product(product)
                         .warehouse(warehouse)
                         .quantity(0)
                         .build());
+    }
+
+    private void syncProductStock(Product product) {
+        Integer totalStock = inventoryItemRepository.sumQuantityByProductSku(product.getSku());
+        product.setQuantity(totalStock != null ? totalStock : 0);
+        productRepository.save(product);
+    }
+
+    private void recordMovement(Product product, Warehouse warehouse, Integer oldQty, Integer newQty,
+                                String movementType, String reason, String referenceNumber, String performedBy) {
+
+        InventoryMovement movement = InventoryMovement.builder()
+                .product(product)
+                .warehouse(warehouse)
+                .previousQuantity(oldQty != null ? oldQty : 0)
+                .newQuantity(newQty != null ? newQty : 0)
+                .difference((newQty != null ? newQty : 0) - (oldQty != null ? oldQty : 0))
+                .movementType(movementType)
+                .reason(Optional.ofNullable(reason).orElse("N/A"))
+                .referenceNumber(Optional.ofNullable(referenceNumber).orElse("N/A"))
+                .performedBy(Optional.ofNullable(performedBy).orElse("SYSTEM"))
+                .build();
+
+        inventoryMovementRepository.save(movement);
+        log.info("📦 Movement recorded [{}] SKU={} WH={} ({}→{}) Ref={}",
+                movementType, product.getSku(), warehouse.getCode(), oldQty, newQty, referenceNumber);
+    }
+
+    private InventoryResponse buildResponse(Product product, Warehouse warehouse, int oldQty, int newQty, String movementType) {
+        return InventoryResponse.builder()
+                .productSku(product.getSku())
+                .productName(product.getName())
+                .warehouseCode(warehouse.getCode())
+                .previousStock(oldQty)
+                .currentStock(newQty)
+                .difference(newQty - oldQty)
+                .movementType(movementType)
+                .updatedAt(LocalDateTime.now())
+                .build();
+    }
+
+    /* =========================================================
+     * Stock Adjustments
+     * ========================================================= */
+
+    @Transactional
+    public InventoryResponse updateStock(InventoryRequest request) {
+        if (request.getQuantity() < 0) {
+            throw new InventoryUpdateException("Quantity must be >= 0");
+        }
+
+        String movementType = Optional.ofNullable(request.getMovementType())
+                .map(s -> s.toUpperCase(Locale.ROOT))
+                .orElse("ADJUST");
+
+        Product product = productService.getProductBySku(request.getProductSku());
+        Warehouse warehouse = warehouseRepository.findById(request.getWarehouseId())
+                .orElseThrow(() -> new WarehouseNotFoundException(request.getWarehouseId()));
+
+        InventoryItem item = getOrCreateItem(product, warehouse);
 
         int oldQty = item.getQuantity();
-        int newQty = switch (request.getMovementType()) {
-            case "IN" -> oldQty + request.getQuantity();
-            case "OUT" -> Math.max(0, oldQty - request.getQuantity());
-            case "ADJUST", "ADJUSTMENT" -> request.getQuantity();
-            default -> oldQty;
-        };
+        int newQty = oldQty;
+
+        switch (movementType) {
+            case "IN" -> newQty = oldQty + request.getQuantity();
+            case "OUT" -> {
+                if (oldQty < request.getQuantity()) {
+                    throw new InventoryUpdateException("Insufficient stock in warehouse");
+                }
+                newQty = oldQty - request.getQuantity();
+            }
+            case "ADJUST", "ADJUSTMENT" -> newQty = request.getQuantity();
+            default -> log.warn("Unknown movementType '{}', no changes applied.", movementType);
+        }
 
         item.setQuantity(newQty);
         inventoryItemRepository.save(item);
 
         recordMovement(product, warehouse, oldQty, newQty,
-                request.getMovementType(), request.getAdjustmentReason(),
-                request.getReferenceNumber(), "SYSTEM");
+                movementType, request.getAdjustmentReason(), request.getReferenceNumber(), "SYSTEM");
 
         syncProductStock(product);
 
-        log.info("✅ Updated stock for {} ({} → {}) in warehouse {}", product.getSku(), oldQty, newQty, warehouse.getCode());
-        return buildResponse(product, warehouse, item, oldQty);
+        log.info("✅ Updated stock SKU={} in WH={} ({}→{}) [{}]",
+                product.getSku(), warehouse.getCode(), oldQty, newQty, movementType);
+
+        return buildResponse(product, warehouse, oldQty, newQty, movementType);
     }
+
+    /* =========================================================
+     * Internal and Sales Stock Reductions
+     * ========================================================= */
+
+    @Transactional
+    public InventoryResponse reduceStock(InventoryRequest request) {
+        request.setMovementType("OUT");
+        return updateStock(request);
+    }
+
+    @Transactional
+    public InventoryResponse updateStockInternal(InventoryRequest request) {
+        log.info("🔗 Internal stock update triggered for SKU: {}", request.getProductSku());
+        return updateStock(request);
+    }
+
+    /* =========================================================
+     * Transfer Between Warehouses
+     * ========================================================= */
 
     @Transactional
     public StockTransferResponse transferStock(StockTransferRequest request) {
@@ -71,47 +156,61 @@ public class InventoryService {
         String sku = request.getProductSku();
         int qty = request.getQuantity();
 
-        // 🔍 Ambil data warehouse & item asal
+        if (qty <= 0) {
+            throw new InventoryUpdateException("Transfer quantity must be > 0");
+        }
+        if (fromId.equals(toId)) {
+            throw new InventoryUpdateException("Source and destination warehouse cannot be the same");
+        }
+
+        log.info("🚚 Transfer {} units of SKU {} from WH:{} → WH:{} (ref={})",
+                qty, sku, fromId, toId, request.getReference());
+
         Warehouse fromWarehouse = warehouseRepository.findById(fromId)
-                .orElseThrow(() -> new WarehouseNotFoundException("Source warehouse not found"));
+                .orElseThrow(() -> new WarehouseNotFoundException(fromId));
         Warehouse toWarehouse = warehouseRepository.findById(toId)
-                .orElseThrow(() -> new WarehouseNotFoundException("Destination warehouse not found"));
+                .orElseThrow(() -> new WarehouseNotFoundException(toId));
+
+        Product product = productService.getProductBySku(sku);
 
         InventoryItem fromItem = inventoryItemRepository.findByWarehouseAndProductSku(fromWarehouse, sku)
-                .orElseThrow(() -> new InventoryQueryException("Product not found in source warehouse"));
+                .orElseGet(() -> InventoryItem.builder()
+                        .warehouse(fromWarehouse)
+                        .product(product)
+                        .quantity(0)
+                        .build());
 
-        if (fromItem.getQuantity() < qty) {
+        InventoryItem toItem = inventoryItemRepository.findByWarehouseAndProductSku(toWarehouse, sku)
+                .orElseGet(() -> InventoryItem.builder()
+                        .warehouse(toWarehouse)
+                        .product(product)
+                        .quantity(0)
+                        .build());
+
+        int oldFrom = fromItem.getQuantity();
+        int oldTo = toItem.getQuantity();
+
+        if (oldFrom < qty) {
             throw new InventoryUpdateException("Insufficient stock in source warehouse");
         }
 
-        // 🔽 Kurangi stok di gudang asal
-        fromItem.setQuantity(fromItem.getQuantity() - qty);
-        inventoryItemRepository.save(fromItem);
+        fromItem.setQuantity(oldFrom - qty);
+        toItem.setQuantity(oldTo + qty);
 
-        // 🔼 Tambah stok di gudang tujuan
-        InventoryItem toItem = inventoryItemRepository.findByWarehouseAndProductSku(toWarehouse, sku)
-                .orElseGet(() -> {
-                    InventoryItem newItem = new InventoryItem();
-                    newItem.setWarehouse(toWarehouse);
-                    newItem.setProduct(fromItem.getProduct());
-                    newItem.setQuantity(0);
-                    return newItem;
-                });
-        toItem.setQuantity(toItem.getQuantity() + qty);
+        inventoryItemRepository.save(fromItem);
         inventoryItemRepository.save(toItem);
 
-        // 🧾 Catat movement log
-        InventoryMovement movement = new InventoryMovement();
-        movement.setProduct(fromItem.getProduct());
-        movement.setQuantity(qty);
-        movement.setMovementType("TRANSFER");
-        movement.setFromWarehouse(fromWarehouse);
-        movement.setToWarehouse(toWarehouse);
-        movement.setReferenceNumber(request.getReference());
-        inventoryMovementRepository.save(movement);
+        recordMovement(product, fromWarehouse, oldFrom, fromItem.getQuantity(),
+                "TRANSFER_OUT", "Transfer to " + toWarehouse.getCode(), request.getReference(), "SYSTEM");
 
-        log.info("✅ Transferred {} of {} from {} to {}",
-                qty, sku, fromWarehouse.getCode(), toWarehouse.getCode());
+        recordMovement(product, toWarehouse, oldTo, toItem.getQuantity(),
+                "TRANSFER_IN", "Transfer from " + fromWarehouse.getCode(), request.getReference(), "SYSTEM");
+
+        syncProductStock(product);
+
+        log.info("✅ Transfer done: SKU={} {} -> {} | {}→{} & {}→{}",
+                sku, fromWarehouse.getCode(), toWarehouse.getCode(),
+                oldFrom, fromItem.getQuantity(), oldTo, toItem.getQuantity());
 
         return StockTransferResponse.builder()
                 .status("SUCCESS")
@@ -123,72 +222,22 @@ public class InventoryService {
                 .build();
     }
 
+    /* =========================================================
+     * Queries / Exports
+     * ========================================================= */
 
-    // 🔗 Used by Supply Chain Service integration
-    @Transactional
-    public InventoryResponse updateStockInternal(InventoryRequest request) {
-        log.info("🔗 Internal stock update triggered from Supply Chain for {}", request.getProductSku());
-        return updateStock(request);
-    }
-
-    // 🚚 Reduce stock due to sales/shipment
-    @Transactional
-    public InventoryResponse reduceStock(InventoryRequest request) {
-        request.setMovementType("OUT");
-        return updateStock(request);
-    }
-
-    // 🧾 Record stock movement (for audit + analytics)
-    private void recordMovement(Product product, Warehouse warehouse, int oldQty, int newQty,
-                                String movementType, String reason, String referenceNumber, String performedBy) {
-
-        InventoryMovement movement = InventoryMovement.builder()
-                .product(product)
-                .warehouse(warehouse)
-                .previousQuantity(oldQty)
-                .newQuantity(newQty)
-                .difference(newQty - oldQty)
-                .movementType(movementType)
-                .reason(reason != null ? reason : "N/A")
-                .referenceNumber(referenceNumber != null ? referenceNumber : "N/A")
-                .performedBy(performedBy != null ? performedBy : "SYSTEM")
-                .build();
-
-        inventoryMovementRepository.save(movement);
-        log.info("📦 Movement recorded: [{}] {} {} ({} → {}) - Ref: {}", movementType, product.getSku(), reason, oldQty, newQty, referenceNumber);
-    }
-
-    // 🔁 Update total stock on product table
-    private void syncProductStock(Product product) {
-        Integer totalStock = inventoryItemRepository.sumQuantityByProductSku(product.getSku());
-        product.setQuantity(totalStock != null ? totalStock : 0);
-        productRepository.save(product);
-    }
-
-    // 📄 Build response for API
-    private InventoryResponse buildResponse(Product product, Warehouse warehouse,
-                                            InventoryItem item, int oldQty) {
-        return InventoryResponse.builder()
-                .productSku(product.getSku())
-                .productName(product.getName())
-                .warehouseCode(warehouse.getCode())
-                .previousStock(oldQty)
-                .currentStock(item.getQuantity())
-                .difference(item.getQuantity() - oldQty)
-                .movementType(item.getQuantity() > oldQty ? "IN" : "OUT")
-                .updatedAt(LocalDateTime.now())
-                .build();
-    }
-
-    // 🔍 Query utilities
+    @Transactional(readOnly = true)
     public Integer getTotalStockByProduct(String sku) {
-        return inventoryItemRepository.sumQuantityByProductSku(sku);
+        Integer total = inventoryItemRepository.sumQuantityByProductSku(sku);
+        return total != null ? total : 0;
     }
 
+    @Transactional(readOnly = true)
     public Integer getStockByProductAndWarehouse(String sku, Long warehouseId) {
         return inventoryItemRepository.findQuantityByProductAndWarehouse(sku, warehouseId).orElse(0);
     }
 
+    @Transactional(readOnly = true)
     public List<InventoryResponse> getAllInventory() {
         return inventoryItemRepository.findAll().stream()
                 .map(item -> InventoryResponse.builder()
@@ -201,36 +250,41 @@ public class InventoryService {
                 .toList();
     }
 
-    // 📜 Get all movements (for monitoring)
-    public List<InventoryMovement> getAllMovements() {
-        return inventoryMovementRepository.findAll();
-    }
-
-    // 📤 Export data for analytics (6 months window)
-    public List<InventoryMovement> exportMovements() {
-        LocalDateTime sixMonthsAgo = LocalDateTime.now().minusMonths(6);
+    @Transactional(readOnly = true)
+    public List<InventoryMovementDTO> getAllMovements() {
         return inventoryMovementRepository.findAll().stream()
-                .filter(m -> m.getCreatedAt().isAfter(sixMonthsAgo))
-                .filter(m -> m.getMovementType().equalsIgnoreCase("OUT")
-                        || m.getMovementType().equalsIgnoreCase("IN"))
+                .map(m -> InventoryMovementDTO.builder()
+                        .id(m.getId())
+                        .productSku(m.getProduct().getSku())
+                        .productName(m.getProduct().getName())
+                        .warehouseCode(
+                                m.getWarehouse() != null ? m.getWarehouse().getCode() :
+                                        (m.getToWarehouse() != null ? m.getToWarehouse().getCode() : "-")
+                        )
+                        .movementType(m.getMovementType())
+                        .difference(m.getDifference())
+                        .reason(m.getReason())
+                        .referenceNumber(m.getReferenceNumber())
+                        .performedBy(m.getPerformedBy())
+                        .createdAt(m.getCreatedAt())
+                        .build())
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public List<InventoryMovementResponse> exportMovementSummary() {
-    LocalDateTime sixMonthsAgo = LocalDateTime.now().minusMonths(6);
-    return inventoryMovementRepository.findAll().stream()
-            .filter(m -> m.getCreatedAt().isAfter(sixMonthsAgo))
-            .map(m -> InventoryMovementResponse.builder()
-                    .productSku(m.getProduct().getSku())
-                    .warehouseCode(m.getWarehouse().getCode())
-                    .movementType(m.getMovementType())
-                    .difference(m.getDifference())
-                    .reason(m.getReason())
-                    .referenceNumber(m.getReferenceNumber())
-                    .createdAt(m.getCreatedAt())
-                    .build())
-            .toList();
+        LocalDateTime sixMonthsAgo = LocalDateTime.now().minusMonths(6);
+        return inventoryMovementRepository.findAll().stream()
+                .filter(m -> Optional.ofNullable(m.getCreatedAt()).orElse(LocalDateTime.MIN).isAfter(sixMonthsAgo))
+                .map(m -> InventoryMovementResponse.builder()
+                        .productSku(m.getProduct().getSku())
+                        .warehouseCode(m.getWarehouse().getCode())
+                        .movementType(m.getMovementType())
+                        .difference(m.getDifference())
+                        .reason(m.getReason())
+                        .referenceNumber(m.getReferenceNumber())
+                        .createdAt(m.getCreatedAt())
+                        .build())
+                .toList();
     }
-
-    
 }

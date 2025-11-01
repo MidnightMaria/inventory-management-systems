@@ -1,11 +1,6 @@
 package com.agnesmaria.inventory.springboot.controller;
 
-import com.agnesmaria.inventory.springboot.dto.InventoryMovementResponse;
-import com.agnesmaria.inventory.springboot.dto.InventoryRequest;
-import com.agnesmaria.inventory.springboot.dto.InventoryResponse;
-import com.agnesmaria.inventory.springboot.dto.StockTransferRequest;
-import com.agnesmaria.inventory.springboot.dto.StockTransferResponse;
-import com.agnesmaria.inventory.springboot.model.InventoryMovement;
+import com.agnesmaria.inventory.springboot.dto.*;
 import com.agnesmaria.inventory.springboot.service.InventoryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -56,7 +51,6 @@ public class InventoryController {
         return ResponseEntity.ok(inventoryService.getAllInventory());
     }
 
-    // 🔹 Endpoint untuk Supply Chain Service
     @PostMapping("/internal/adjust-stock")
     @Operation(summary = "Internal: Adjust stock after purchase order is received")
     public ResponseEntity<InventoryResponse> adjustStockInternal(@RequestBody InventoryRequest request) {
@@ -66,26 +60,18 @@ public class InventoryController {
     @PostMapping("/transfer-stock")
     @Operation(summary = "Transfer stock between warehouses")
     public ResponseEntity<StockTransferResponse> transferStock(@RequestBody StockTransferRequest request) {
-        StockTransferResponse response = inventoryService.transferStock(request);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(inventoryService.transferStock(request));
     }
 
     // 🧾 Get all inventory movement logs
     @GetMapping("/movements")
     @Operation(summary = "Get all inventory movement logs", description = "Retrieve all stock movement records")
-    public ResponseEntity<List<InventoryMovement>> getAllMovements() {
+    public ResponseEntity<List<InventoryMovementDTO>> getAllMovements() {
         return ResponseEntity.ok(inventoryService.getAllMovements());
     }
 
-    // 📤 Export inventory movements for analytics
-    @GetMapping("/movements/export")
-    @Operation(summary = "Export inventory movement data", description = "Export historical movement data for analytics or forecasting")
-    public ResponseEntity<List<InventoryMovement>> exportMovements() {
-        return ResponseEntity.ok(inventoryService.exportMovements());
-    }
-
     @GetMapping("/movements/export/summary")
-    @Operation(summary = "Export summarized movement data", 
+    @Operation(summary = "Export summarized movement data",
             description = "Simplified version for forecasting or analytics")
     public ResponseEntity<List<InventoryMovementResponse>> exportMovementSummary() {
         return ResponseEntity.ok(inventoryService.exportMovementSummary());
