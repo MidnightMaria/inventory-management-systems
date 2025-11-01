@@ -3,6 +3,8 @@ package com.agnesmaria.inventory.springboot.controller;
 import com.agnesmaria.inventory.springboot.dto.InventoryMovementResponse;
 import com.agnesmaria.inventory.springboot.dto.InventoryRequest;
 import com.agnesmaria.inventory.springboot.dto.InventoryResponse;
+import com.agnesmaria.inventory.springboot.dto.StockTransferRequest;
+import com.agnesmaria.inventory.springboot.dto.StockTransferResponse;
 import com.agnesmaria.inventory.springboot.model.InventoryMovement;
 import com.agnesmaria.inventory.springboot.service.InventoryService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -59,6 +61,13 @@ public class InventoryController {
     @Operation(summary = "Internal: Adjust stock after purchase order is received")
     public ResponseEntity<InventoryResponse> adjustStockInternal(@RequestBody InventoryRequest request) {
         return ResponseEntity.ok(inventoryService.updateStockInternal(request));
+    }
+
+    @PostMapping("/transfer-stock")
+    @Operation(summary = "Transfer stock between warehouses")
+    public ResponseEntity<StockTransferResponse> transferStock(@RequestBody StockTransferRequest request) {
+        StockTransferResponse response = inventoryService.transferStock(request);
+        return ResponseEntity.ok(response);
     }
 
     // 🧾 Get all inventory movement logs

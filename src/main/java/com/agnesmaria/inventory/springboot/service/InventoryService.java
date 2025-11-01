@@ -3,6 +3,10 @@ package com.agnesmaria.inventory.springboot.service;
 import com.agnesmaria.inventory.springboot.dto.InventoryMovementResponse;
 import com.agnesmaria.inventory.springboot.dto.InventoryRequest;
 import com.agnesmaria.inventory.springboot.dto.InventoryResponse;
+import com.agnesmaria.inventory.springboot.dto.StockTransferRequest;
+import com.agnesmaria.inventory.springboot.dto.StockTransferResponse;
+import com.agnesmaria.inventory.springboot.exception.InventoryQueryException;
+import com.agnesmaria.inventory.springboot.exception.InventoryUpdateException;
 import com.agnesmaria.inventory.springboot.exception.WarehouseNotFoundException;
 import com.agnesmaria.inventory.springboot.model.*;
 import com.agnesmaria.inventory.springboot.repository.*;
@@ -59,6 +63,66 @@ public class InventoryService {
         log.info("✅ Updated stock for {} ({} → {}) in warehouse {}", product.getSku(), oldQty, newQty, warehouse.getCode());
         return buildResponse(product, warehouse, item, oldQty);
     }
+
+    @Transactional
+    public StockTransferResponse transferStock(StockTransferRequest request) {
+        Long fromId = request.getFromWarehouseId();
+        Long toId = request.getToWarehouseId();
+        String sku = request.getProductSku();
+        int qty = request.getQuantity();
+
+        // 🔍 Ambil data warehouse & item asal
+        Warehouse fromWarehouse = warehouseRepository.findById(fromId)
+                .orElseThrow(() -> new WarehouseNotFoundException("Source warehouse not found"));
+        Warehouse toWarehouse = warehouseRepository.findById(toId)
+                .orElseThrow(() -> new WarehouseNotFoundException("Destination warehouse not found"));
+
+        InventoryItem fromItem = inventoryItemRepository.findByWarehouseAndProductSku(fromWarehouse, sku)
+                .orElseThrow(() -> new InventoryQueryException("Product not found in source warehouse"));
+
+        if (fromItem.getQuantity() < qty) {
+            throw new InventoryUpdateException("Insufficient stock in source warehouse");
+        }
+
+        // 🔽 Kurangi stok di gudang asal
+        fromItem.setQuantity(fromItem.getQuantity() - qty);
+        inventoryItemRepository.save(fromItem);
+
+        // 🔼 Tambah stok di gudang tujuan
+        InventoryItem toItem = inventoryItemRepository.findByWarehouseAndProductSku(toWarehouse, sku)
+                .orElseGet(() -> {
+                    InventoryItem newItem = new InventoryItem();
+                    newItem.setWarehouse(toWarehouse);
+                    newItem.setProduct(fromItem.getProduct());
+                    newItem.setQuantity(0);
+                    return newItem;
+                });
+        toItem.setQuantity(toItem.getQuantity() + qty);
+        inventoryItemRepository.save(toItem);
+
+        // 🧾 Catat movement log
+        InventoryMovement movement = new InventoryMovement();
+        movement.setProduct(fromItem.getProduct());
+        movement.setQuantity(qty);
+        movement.setMovementType("TRANSFER");
+        movement.setFromWarehouse(fromWarehouse);
+        movement.setToWarehouse(toWarehouse);
+        movement.setReferenceNumber(request.getReference());
+        inventoryMovementRepository.save(movement);
+
+        log.info("✅ Transferred {} of {} from {} to {}",
+                qty, sku, fromWarehouse.getCode(), toWarehouse.getCode());
+
+        return StockTransferResponse.builder()
+                .status("SUCCESS")
+                .message("Stock transferred successfully")
+                .productSku(sku)
+                .quantity(qty)
+                .fromWarehouseId(fromId)
+                .toWarehouseId(toId)
+                .build();
+    }
+
 
     // 🔗 Used by Supply Chain Service integration
     @Transactional
@@ -167,4 +231,6 @@ public class InventoryService {
                     .build())
             .toList();
     }
+
+    
 }
