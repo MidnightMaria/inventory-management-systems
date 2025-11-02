@@ -272,19 +272,37 @@ public class InventoryService {
     }
 
     @Transactional(readOnly = true)
-    public List<InventoryMovementResponse> exportMovementSummary() {
-        LocalDateTime sixMonthsAgo = LocalDateTime.now().minusMonths(6);
-        return inventoryMovementRepository.findAll().stream()
-                .filter(m -> Optional.ofNullable(m.getCreatedAt()).orElse(LocalDateTime.MIN).isAfter(sixMonthsAgo))
-                .map(m -> InventoryMovementResponse.builder()
-                        .productSku(m.getProduct().getSku())
-                        .warehouseCode(m.getWarehouse().getCode())
-                        .movementType(m.getMovementType())
-                        .difference(m.getDifference())
-                        .reason(m.getReason())
-                        .referenceNumber(m.getReferenceNumber())
-                        .createdAt(m.getCreatedAt())
-                        .build())
-                .toList();
-    }
+public List<InventoryMovementResponse> exportMovementSummary() {
+    LocalDateTime sixMonthsAgo = LocalDateTime.now().minusMonths(6);
+
+    return inventoryMovementRepository.findAll().stream()
+            // ✅ include semua data dalam 6 bulan terakhir, tapi createdAt null tetap ikut
+            .filter(m -> {
+                LocalDateTime created = Optional.ofNullable(m.getCreatedAt()).orElse(LocalDateTime.MIN);
+                return created.isAfter(sixMonthsAgo) || created.equals(LocalDateTime.MIN);
+            })
+            // ✅ hanya ambil movement relevan untuk forecasting
+            .filter(m -> {
+                String type = Optional.ofNullable(m.getMovementType()).orElse("").toUpperCase(Locale.ROOT);
+                return type.equals("IN") || type.equals("OUT")
+                        || type.equals("TRANSFER_IN") || type.equals("TRANSFER_OUT");
+            })
+            // ✅ mapping aman walau warehouse / product null
+            .map(m -> InventoryMovementResponse.builder()
+                    .productSku(Optional.ofNullable(m.getProduct())
+                            .map(Product::getSku)
+                            .orElse("UNKNOWN"))
+                    .warehouseCode(Optional.ofNullable(m.getWarehouse())
+                            .map(Warehouse::getCode)
+                            .orElse("N/A"))
+                    .movementType(Optional.ofNullable(m.getMovementType())
+                            .orElse("UNKNOWN"))
+                    .difference(Optional.ofNullable(m.getDifference()).orElse(0))
+                    .reason(Optional.ofNullable(m.getReason()).orElse("N/A"))
+                    .referenceNumber(Optional.ofNullable(m.getReferenceNumber()).orElse("N/A"))
+                    .createdAt(Optional.ofNullable(m.getCreatedAt()).orElse(LocalDateTime.now()))
+                    .build())
+            .toList();
+}
+
 }

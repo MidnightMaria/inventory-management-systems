@@ -43,3 +43,5 @@ swagger:
   contact-name: Agnes Maria
   contact-url: https://github.com/MidnightMaria
   contact-mail: agnesmarmarie@gmail.com
+app:
+  seed-data: true
