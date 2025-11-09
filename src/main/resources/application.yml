@@ -44,4 +44,4 @@ swagger:
   contact-url: https://github.com/MidnightMaria
   contact-mail: agnesmarmarie@gmail.com
 app:
-  seed-data: true
+  seed-data: false
