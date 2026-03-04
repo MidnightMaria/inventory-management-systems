@@ -15,7 +15,7 @@ import java.time.Month;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
-@Component
+// @Component
 @RequiredArgsConstructor
 public class SmartInventorySeeder implements CommandLineRunner {
 

@@ -86,6 +86,15 @@ public class WarehouseController {
         return ResponseEntity.noContent().build();
     }
 
+    @DeleteMapping("/{id}")
+    @Operation(summary = "Delete a warehouse by ID")
+    @ApiResponse(responseCode = "204", description = "Warehouse deleted successfully")
+    @ApiResponse(responseCode = "404", description = "Warehouse not found")
+    public ResponseEntity<Void> deleteWarehouse(@PathVariable Long id) {
+        warehouseService.deleteWarehouse(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/active")
     @Operation(summary = "Get all active warehouses")
     @ApiResponse(responseCode = "200", description = "List of all active warehouses",

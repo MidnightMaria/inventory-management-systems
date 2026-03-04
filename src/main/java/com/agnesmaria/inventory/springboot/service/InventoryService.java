@@ -63,7 +63,7 @@ public class InventoryService {
                 .build();
 
         inventoryMovementRepository.save(movement);
-        log.info("📦 Movement recorded [{}] SKU={} WH={} ({}→{}) Ref={}",
+        log.info("Movement recorded [{}] SKU={} WH={} ({}→{}) Ref={}",
                 movementType, product.getSku(), warehouse.getCode(), oldQty, newQty, referenceNumber);
     }
 
@@ -123,7 +123,7 @@ public class InventoryService {
 
         syncProductStock(product);
 
-        log.info("✅ Updated stock SKU={} in WH={} ({}→{}) [{}]",
+        log.info("Updated stock SKU={} in WH={} ({}→{}) [{}]",
                 product.getSku(), warehouse.getCode(), oldQty, newQty, movementType);
 
         return buildResponse(product, warehouse, oldQty, newQty, movementType);
@@ -141,7 +141,7 @@ public class InventoryService {
 
     @Transactional
     public InventoryResponse updateStockInternal(InventoryRequest request) {
-        log.info("🔗 Internal stock update triggered for SKU: {}", request.getProductSku());
+        log.info("Internal stock update triggered for SKU: {}", request.getProductSku());
         return updateStock(request);
     }
 
@@ -163,7 +163,7 @@ public class InventoryService {
             throw new InventoryUpdateException("Source and destination warehouse cannot be the same");
         }
 
-        log.info("🚚 Transfer {} units of SKU {} from WH:{} → WH:{} (ref={})",
+        log.info("Transfer {} units of SKU {} from WH:{} → WH:{} (ref={})",
                 qty, sku, fromId, toId, request.getReference());
 
         Warehouse fromWarehouse = warehouseRepository.findById(fromId)
@@ -208,7 +208,7 @@ public class InventoryService {
 
         syncProductStock(product);
 
-        log.info("✅ Transfer done: SKU={} {} -> {} | {}→{} & {}→{}",
+        log.info("Transfer done: SKU={} {} -> {} | {}→{} & {}→{}",
                 sku, fromWarehouse.getCode(), toWarehouse.getCode(),
                 oldFrom, fromItem.getQuantity(), oldTo, toItem.getQuantity());
 
@@ -276,18 +276,18 @@ public List<InventoryMovementResponse> exportMovementSummary() {
     LocalDateTime sixMonthsAgo = LocalDateTime.now().minusMonths(6);
 
     return inventoryMovementRepository.findAll().stream()
-            // ✅ include semua data dalam 6 bulan terakhir, tapi createdAt null tetap ikut
+            // include semua data dalam 6 bulan terakhir, tapi createdAt null tetap ikut
             .filter(m -> {
                 LocalDateTime created = Optional.ofNullable(m.getCreatedAt()).orElse(LocalDateTime.MIN);
                 return created.isAfter(sixMonthsAgo) || created.equals(LocalDateTime.MIN);
             })
-            // ✅ hanya ambil movement relevan untuk forecasting
+            // hanya ambil movement relevan untuk forecasting
             .filter(m -> {
                 String type = Optional.ofNullable(m.getMovementType()).orElse("").toUpperCase(Locale.ROOT);
                 return type.equals("IN") || type.equals("OUT")
                         || type.equals("TRANSFER_IN") || type.equals("TRANSFER_OUT");
             })
-            // ✅ mapping aman walau warehouse / product null
+            // mapping aman walau warehouse / product null
             .map(m -> InventoryMovementResponse.builder()
                     .productSku(Optional.ofNullable(m.getProduct())
                             .map(Product::getSku)

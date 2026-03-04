@@ -104,4 +104,11 @@ public class WarehouseService {
                 .updatedAt(warehouse.getUpdatedAt())
                 .build();
     }
+    @Transactional
+    public void deleteWarehouse(Long id) {
+        Warehouse warehouse = warehouseRepository.findById(id)
+                .orElseThrow(() -> new WarehouseNotFoundException(id));
+    
+        warehouseRepository.delete(warehouse);
+    }
 }
