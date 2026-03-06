@@ -26,13 +26,13 @@ public class ProductService {
     private final WarehouseRepository warehouseRepository;
     private final InventoryItemRepository inventoryItemRepository;
 
-    // 📦 Get all products
+    // Get all products
     @Transactional(readOnly = true)
     public List<Product> getAllProducts() {
         return productRepository.findAll();
     }
 
-    // 🔍 Get product by SKU
+    // Get product by SKU
     public Product getProductBySku(String sku) {
         return productRepository.findById(sku)
                 .orElseThrow(() -> new ResponseStatusException(
@@ -41,7 +41,7 @@ public class ProductService {
                 ));
     }
 
-    // 🆕 Create new product + initialize stock in default warehouse
+    // Create new product + initialize stock in default warehouse
     @Transactional
     public Product createProduct(Product product) {
         if (productRepository.existsById(product.getSku())) {
@@ -51,10 +51,10 @@ public class ProductService {
             );
         }
 
-        // 💾 Save product first
+        // Save product first
         Product savedProduct = productRepository.save(product);
 
-        // 🏭 Initialize stock in default warehouse (WH-001 or ID=1)
+        // Initialize stock in default warehouse (WH-001 or ID=1)
         try {
             Warehouse defaultWarehouse = warehouseRepository.findById(1L)
                     .orElseThrow(() -> new WarehouseNotFoundException(1L));
@@ -67,20 +67,20 @@ public class ProductService {
 
             inventoryItemRepository.save(item);
 
-            log.info("✅ Initialized stock for {} in warehouse {} (Qty: {})",
+            log.info("Initialized stock for {} in warehouse {} (Qty: {})",
                     savedProduct.getSku(), defaultWarehouse.getCode(), product.getQuantity());
 
         } catch (WarehouseNotFoundException e) {
-            log.warn("⚠️ Default warehouse (ID=1) not found. Product {} created without initial stock record.",
+            log.warn("Default warehouse (ID=1) not found. Product {} created without initial stock record.",
                     product.getSku());
         } catch (Exception e) {
-            log.error("❌ Failed to initialize inventory for {}: {}", product.getSku(), e.getMessage());
+            log.error("Failed to initialize inventory for {}: {}", product.getSku(), e.getMessage());
         }
 
         return savedProduct;
     }
 
-    // ✏️ Update existing product
+    // Update existing product
     @Transactional
     public Product updateProduct(String sku, Product productDetails) {
         Product product = getProductBySku(sku);
@@ -92,11 +92,11 @@ public class ProductService {
         product.setDynamicPricing(productDetails.isDynamicPricing());
         product.setCompetitorPrice(productDetails.getCompetitorPrice());
 
-        log.info("📝 Product updated: {} ({})", sku, product.getName());
+        log.info("Product updated: {} ({})", sku, product.getName());
         return productRepository.save(product);
     }
 
-    // ❌ Delete product (safe)
+    // Delete product (safe)
     @Transactional
     public void deleteProduct(String sku) {
         try {
@@ -107,7 +107,7 @@ public class ProductService {
                 );
             }
             productRepository.deleteById(sku);
-            log.info("🗑️ Product {} deleted successfully", sku);
+            log.info("Product {} deleted successfully", sku);
 
         } catch (DataIntegrityViolationException e) {
             throw new ResponseStatusException(

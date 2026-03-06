@@ -85,7 +85,7 @@ public class ProductController {
     @GetMapping("/{sku}/stock-level")
     @Operation(summary = "Get stock level for a product", description = "Retrieve the current stock quantity recorded in the product table")
     public int getStockLevel(@PathVariable String sku) {
-        return productService.getProductBySku(sku).getQuantity(); // ✅ FIXED
+        return productService.getProductBySku(sku).getQuantity();
     }
 
     @GetMapping("/export")

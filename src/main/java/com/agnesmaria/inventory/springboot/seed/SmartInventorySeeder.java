@@ -36,17 +36,17 @@ public class SmartInventorySeeder implements CommandLineRunner {
     @Transactional
     public void run(String... args) {
         if (warehouseRepository.count() > 0 && productRepository.count() > 0 && movementRepository.count() > 0) {
-            System.out.println("⚠️ SmartInventorySeeder skipped — data already exists.");
+            System.out.println("SmartInventorySeeder skipped — data already exists.");
             return;
         }
 
-        System.out.println("🚀 Running SmartInventorySeeder...");
+        System.out.println("Running SmartInventorySeeder...");
 
         List<Warehouse> warehouses = seedWarehouses(10);
         List<Product> products = seedProducts(200);
         seedInventoryMovements(products, warehouses, 15000);
 
-        System.out.println("✅ SmartInventorySeeder finished — realistic inventory dataset generated.");
+        System.out.println("SmartInventorySeeder finished — realistic inventory dataset generated.");
     }
 
     private List<Warehouse> seedWarehouses(int count) {
@@ -66,7 +66,7 @@ public class SmartInventorySeeder implements CommandLineRunner {
         }
 
         List<Warehouse> saved = warehouseRepository.saveAll(warehouses);
-        System.out.println("🏬 Created " + saved.size() + " warehouses.");
+        System.out.println("Created " + saved.size() + " warehouses.");
         return saved;
     }
 
@@ -93,7 +93,7 @@ public class SmartInventorySeeder implements CommandLineRunner {
         }
 
         List<Product> saved = productRepository.saveAll(products);
-        System.out.println("📦 Created " + saved.size() + " products.");
+        System.out.println("Created " + saved.size() + " products.");
         return saved;
     }
 
@@ -144,7 +144,7 @@ public class SmartInventorySeeder implements CommandLineRunner {
 
         productRepository.saveAll(products);
         movementRepository.saveAll(movements);
-        System.out.println("📊 Created " + movements.size() + " inventory movement logs.");
+        System.out.println("Created " + movements.size() + " inventory movement logs.");
     }
 
     private LocalDateTime randomDateInLastYear() {

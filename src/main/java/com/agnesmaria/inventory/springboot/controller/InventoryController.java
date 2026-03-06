@@ -63,7 +63,7 @@ public class InventoryController {
         return ResponseEntity.ok(inventoryService.transferStock(request));
     }
 
-    // 🧾 Get all inventory movement logs
+    // Get all inventory movement logs
     @GetMapping("/movements")
     @Operation(summary = "Get all inventory movement logs", description = "Retrieve all stock movement records")
     public ResponseEntity<List<InventoryMovementDTO>> getAllMovements() {
